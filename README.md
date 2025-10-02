@@ -65,7 +65,8 @@ Our blended motions are plausible and smooth. We evaluate with metrics from the 
 - AI-Powered Search: By integrating Elastic, we provide an intuitive way to explore large motion libraries, solving the Elastic challenge of conversational search[1].
 - Automated Pipeline: Using Fivetran and Vertex AI Pipelines exemplifies modern MLOps: data ingestion → processing → training → serving, all automated and scalable. This addresses the Fivetran challenge directly.
 
-Future Work
+**Future Work**
+
 We plan to extend MotionBlendAI by adding multi-modal input (text prompts or music cues) using Google’s Gemini/LLM, further blending on context. We also aim to support multi-character blending (e.g. syncing two dancers) and additional GCP agents (Agent Builder) for fully autonomous animation tools. Finally, we will refine the UI, perhaps embedding Elastic’s advanced APIs and BigQuery ML for on-the-fly anomaly detection in motions.
 
 By leveraging GCP, Elastic, and Fivetran together, MotionBlendAI showcases an innovative, practical solution for motion synthesis and search. We believe this fulfills the AI Accelerate Hackathon goals and will enable creators to blend complex performances with ease.
