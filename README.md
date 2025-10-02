@@ -1,6 +1,4 @@
 # MotionBlendAI
-Creating lifelike character animations requires smoothly transitioning between different motion clips. Traditional blending often relies on manual tweaking or large motion datasets. Recent single-shot GAN models (e.g. GANimator) can generate entire motions from one example, but lack built-in blending controls.
-
 **Real-Time MoCap Blending on Google Cloud (GCP) with Elastic & Fivetran**
 We propose MotionBlendAI, an end-to-end motion capture (MoCap) pipeline that seamlessly blends human animations using a single-shot GAN model, fully integrated with Google Cloud Platform (GCP), Elastic, and Fivetran. This addresses the Google AI Accelerate Hackathon (Sept–Oct 2025) multi-partner challenges by combining GCP’s AI tools with both Elastic’s AI-powered search and Fivetran’s data connectors[1][2]. Our approach extends recent research on single-shot animation blending[3][4] and adapts it into a scalable cloud solution. By ingesting raw MoCap data via Fivetran, indexing motion features in Elastic for fast retrieval, and running our GAN-based blending model on GCP (using NVIDIA RTX GPUs), MotionBlendAI enables artists to generate smooth, blended animations on demand without large datasets or manual stitching.
 
