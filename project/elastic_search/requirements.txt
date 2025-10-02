@@ -1,0 +1,5 @@
+# Python dependencies for elastic_search
+Flask
+elasticsearch
+# For Google Cloud Storage integration
+google-cloud-storage
