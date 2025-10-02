@@ -1,0 +1,207 @@
+Fivetran Custom Connector (Python → BigQuery)
+Fivetran’s Connector SDK lets you build a data ingestion connector in Python and run it on Fivetran- managed compute 1 . In practice, you subclass fivetran_sdk.Connector and implement a connect() method that continuously pulls or receives data and calls self.load(...) to send rows into the Fivetran destination (BigQuery in this case). Fivetran handles scheduling and resource allocation
+1 . For example, a simple “PoseStream” connector might look like: # fivetran_connector/PoseStreamConnector.py
+  from fivetran_sdk import Connector
+  class PoseStreamConnector(Connector):
+      def connect(self):
+          while True:
+              # Grab the next motion-capture frame (3D joint coordinates,
+  timestamp, etc.)
+              frame = capture_next_frame()
+  # Preprocess or filter the raw frame data (normalize, select joints, etc.)
+              processed = preprocess(frame)
+              # Load the processed frame into the BigQuery table via Fivetran
+              self.load(processed)
+• The connect() loop can be infinite (for real-time streams) or finite (batch ingestion).
+• self.load(...) emits rows to be upserted into the connected BigQuery table.
+• All scheduling, auth, and transport to BigQuery is managed by the Fivetran platform 1 .
+This custom connector would be packaged and deployed through Fivetran’s UI or CLI. (See the Fivetran Connector SDK docs for setup and deployment details 1 .)
+GANimator PyTorch Model (Training & Inference)
+GANimator is a generative motion-synthesis model (SIGGRAPH 2022) that can learn a novel motion sequence from a single example 2 . It is implemented in PyTorch and typically trained on 3D skeleton/BVH data. A standard training loop involves sampling sequences, passing them through a generator, computing a GAN loss against real data, and backpropagating. For example, a simplified PyTorch training script might look like:
+        1
+ # ganimator/train.py (conceptual example)
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+# (Define your GAN model, e.g., a Generator and Discriminator.)
+class Generator(nn.Module):
+    def __init__(self, ...):
+        super().__init__()
+        # define layers...
+    def forward(self, noise):
+        # produce a motion sequence
+        return generated_sequence
+generator = Generator(...)
+optimizer = torch.optim.Adam(generator.parameters(), lr=1e-3)
+loss_fn = nn.MSELoss()  # placeholder for GAN-specific loss
+# Assume `training_sequences` is a dataset of real motion sequences
+dataloader = DataLoader(training_sequences, batch_size=16, shuffle=True)
+for epoch in range(num_epochs):
+    for real_seq in dataloader:
+        optimizer.zero_grad()
+        noise = torch.randn(real_seq.size(0), latent_dim)
+        generated_seq = generator(noise)
+synthesize motion
+        loss = loss_fn(generated_seq, real_seq)
+loss or adversarial
+        loss.backward()
+        optimizer.step()
+# random
+#
+# e.g. L2
+input
+• In practice, GANimator’s code (e.g. [train.py] 3 ) uses specialized losses (reconstruction, contact, adversarial) and data loaders for BVH files. The above is a conceptual skeleton. The official repository shows usage like:
+       python train.py --bvh_prefix=./data/Crabnew --bvh_name=Crab-dance-long --
+       save_path={save_path}
+to train on a “Crab-dance” motion 3 .
+For inference (generating new motions), you would load the trained model and run it in evaluation mode. For example:
+ 2
+
+ # ganimator/infer.py (conceptual example)
+import torch
+# Re-create the model architecture and load trained weights
+generator = Generator(...)
+generator.load_state_dict(torch.load('generator.pth'))
+generator.eval()
+# Generate a new motion from random seed or a conditional seed motion
+seed_noise = torch.randn(1, latent_dim)
+with torch.no_grad():
+    new_motion = generator(seed_noise)
+# `new_motion` is now a synthesized motion sequence (e.g., a NumPy array or
+tensor).
+ • The GANimator repository provides a demo.py script for synthesis using pretrained models practice you’d adapt that or use a custom script to load your generator and sample.
+4 . In Overall, the GANimator model training/inference code follows standard PyTorch patterns. Cite the
+repository for details on options and modes 4 3 .
+Elastic Vector Indexing & Search Interface
+To enable semantic/vector search over motions or descriptors, one can use Elasticsearch (Elastic) with its k- NN search feature. The pipeline is: (1) Convert data (e.g. motion embeddings or encoded features) into fixed-length vectors via an ML model, (2) index those vectors in an Elastic index, and (3) run k-nearest- neighbor queries at search time 5 6 . In Elastic, each document stores its metadata and a
+float_vector field for the embedding; queries with knn find the closest vectors efficiently.
+For example, a simple Flask API could wrap this logic. The Python elasticsearch client can perform a k-
+NN query like:
+  # elastic_search/app.py
+  from flask import Flask, request, jsonify
+  from elasticsearch import Elasticsearch
+  app = Flask(__name__)
+  es = Elasticsearch([{"host": "localhost", "port": 9200}])
+  @app.route('/search', methods=['POST'])
+  def semantic_search():
+      req = request.get_json()
+      query_vector = req.get("vector")
+      k = req.get("k", 10)
+     3
+
+        # Perform k-NN search on index "motions" using the vector field
+  "motion_vector"
+      response = es.search(index="motions", body={
+          "size": k,
+          "query": {
+              "knn": {
+                  "motion_vector": {
+                      "vector": query_vector,
+                      "k": k
+} }
+} })
+      # Return the matching documents (source content) to the client
+      hits = [hit["_source"] for hit in response["hits"]["hits"]]
+      return jsonify(hits)
+• This Flask app listens for POSTs with a JSON payload {"vector": [...], "k": 10} , runs an Elastic k-NN query, and returns the top- k results.
+• The Elastic k-NN query (introduced in ES 8.x) uses approximate nearest neighbor search under the hood 5 6 .
+• The index motions must have been created with a mapping that defines motion_vector as a dense_vector field. Indexing code (not shown) would bulk-add documents with their embedded
+vectors (e.g. from the GANimator output).
+For a user interface, a front-end (Flask templates or React, etc.) can send user text/pose queries and call this /search endpoint. (For example, a simple HTML form could POST to /search and display results.) This
+architecture – embedding + Elastic + API – enables fast semantic search on motions or other data 5 6 . GCP Orchestration with Vertex AI Pipelines
+Google Cloud’s Vertex AI Pipelines provides serverless orchestration for ML workflows 7 . You define a pipeline (usually in Kubeflow Pipelines DSL) and submit it to Vertex; Vertex runs the pipeline tasks (often on AI Platform Training jobs, etc.) and manages execution 7 . A typical pipeline definition might use the KFP Python SDK with Google Cloud components. For example:
+  # vertex_pipeline/pipeline.py
+  import kfp
+  from google.cloud import aiplatform
+  from google_cloud_pipeline_components.v1.dataset import ImageDatasetCreateOp
+  from google_cloud_pipeline_components.v1.automl.training_job import
+  AutoMLImageTrainingJobRunOp
+  from google_cloud_pipeline_components.v1.endpoint import EndpointCreateOp,
+  ModelDeployOp
+          4
+
+  @kfp.dsl.pipeline(
+    name="automl-image-training",
+    pipeline_root="gs://my-bucket/pipeline-root/")
+def pipeline(project_id: str):
+    # 1) Create an AutoML dataset from CSV on GCS
+    ds_op = ImageDatasetCreateOp(
+        project=project_id,
+        display_name="flowers-dataset",
+        gcs_source="gs://my-bucket/data.csv",
+import_schema_uri=aiplatform.schema.dataset.ioformat.image.single_label_classification,
+    )
+    # 2) Train an AutoML model using the dataset
+    training_job = AutoMLImageTrainingJobRunOp(
+        project=project_id,
+        display_name="flowers-training-job",
+        prediction_type="classification",
+        model_type="CLOUD",
+        dataset=ds_op.outputs["dataset"],
+        model_display_name="flowers-model",
+)
+    # 3) Create an endpoint and deploy the trained model
+    endpoint_op = EndpointCreateOp(project=project_id, display_name="flowers-
+endpoint")
+    ModelDeployOp(
+        model=training_job.outputs["model"],
+        endpoint=endpoint_op.outputs["endpoint"],
+        deployed_model_display_name="flowers-deployment",
+        automatic_resources_min_replica_count=1,
+        automatic_resources_max_replica_count=1,
+)
+if __name__ == '__main__':
+    # Compile the pipeline to a YAML for Vertex AI
+    kfp.compiler.Compiler().compile(
+        pipeline_func=pipeline,
+        package_path='pipeline.yaml')
+• The above example (inspired by the Vertex docs) uses @kfp.dsl.pipeline to define the workflow 8 . It creates a dataset, trains an AutoML model, and deploys it. In your use case, steps could be:
+run the Fivetran ingest job, kick off GANimator training, index results into Elasticsearch, etc. Each
+step can be a custom component or a script.
+• After defining the pipeline, Compiler().compile(...) produces a pipeline.yaml that
+contains the full spec for the pipeline run 9 .
+• You then submit this to Vertex AI (e.g. using google.cloud.aiplatform.PipelineJob in Python
+or gcloud CLI) to execute the pipeline. Vertex pipelines are serverless, so you only pay for the underlying services used by each step (AutoML, notebooks, dataflow, etc.) 7 .
+     5
+
+Vertex AI Pipelines thus orchestrates the end-to-end workflow. For example, one pipeline step could invoke the Fivetran connector (or wait on the BigQuery table), the next could trigger the GANimator training (as a custom job), and another could push embeddings to Elasticsearch. This orchestration ensures repeatability
+and easy scheduling of the entire ML workflow
+Project File Structure
+A typical project might be organized as follows:
+project/
+├── fivetran_connector/
+│ └── PoseStreamConnector.py │
+├── ganimator/
+│ ├── train.py
+│ └── infer.py motions)
+│
+├── elastic_search/
+│ ├── app.py
+│ ├── requirements.txt
+│ └── static/
+7
+8 .
+ │
+HTML)
+│
+└── vertex_pipeline/
+├── pipeline.py └── pipeline.yaml
+# PyTorch training script for GANimator
+# PyTorch inference script (generates
+# Flask API for vector search
+# Python deps (Flask, elasticsearch, etc.)
+# (Optional) Front-end UI (React or plain
+# KFP pipeline definition (as above)
+# Compiled pipeline spec for Vertex AI
+└── index.html
+# Fivetran SDK connector code
+Each component lives in its directory. The Fivetran connector is deployed via Fivetran (with its own config). The GANimator folder contains training/inference code and data readers. The Elastic folder runs a Flask app that queries the ES index. The Vertex folder contains the pipeline definition and related scripts. This modular structure keeps components organized and makes development and deployment clearer.
+Sources: Fivetran Connector SDK docs 1 ; GANimator SIGGRAPH repo 2 4 3 ; Elasticsearch vector search blog 5 6 ; Google Vertex AI pipelines docs 7 8 9 .
+1 Connector SDK for Custom Connectors | Example Custom Connectors https://fivetran.com/docs/connector-sdk/examples
+2 3 4 GitHub - PeizhuoLi/ganimator: A motion generation model learned from a single example [SIGGRAPH 2022]
+https://github.com/PeizhuoLi/ganimator
+ 6
+
+5 6 Vector search & kNN implementation guide - API edition - Elasticsearch Labs https://www.elastic.co/search-labs/blog/vector-search-implementation-guide-api-edition
+7 GitHub - GoogleCloudPlatform/vertex-pipelines-end-to-end-samples https://github.com/GoogleCloudPlatform/vertex-pipelines-end-to-end-samples
+8 9 Build a pipeline | Vertex AI | Google Cloud https://cloud.google.com/vertex-ai/docs/pipelines/build-pipeline
