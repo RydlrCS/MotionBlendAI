@@ -40,11 +40,11 @@ Creating lifelike character animations requires smoothly transitioning between d
 
 #**Implementation Details**
 
-**Vertex AI & GPUs:** We use Vertex AI Pipelines to orchestrate training and inference jobs[15]. Each job runs in a container on a GPU VM. Google’s new NVIDIA GPUs (H100/A100) deliver 10–20× acceleration over older hardware[11]. The model is implemented in PyTorch and leverages a variant of the GANimator codebase[8].
+1. **Vertex AI & GPUs:** We use Vertex AI Pipelines to orchestrate training and inference jobs[15]. Each job runs in a container on a GPU VM. Google’s new NVIDIA GPUs (H100/A100) deliver 10–20× acceleration over older hardware[11]. The model is implemented in PyTorch and leverages a variant of the GANimator codebase[8].
 
-**Elastic Setup:** We deploy Elastic Cloud via GCP Marketplace. Motion embeddings (e.g. last-layer GAN features) are upserted into an index. We use Elastic’s REST API (via Python) to handle queries. This allows advanced search (filter by skeleton, style, etc.) and supports future Gemini or Vertex AI integration for advanced RAG (retrieval-augmented) queries.
+2. **Elastic Setup:** We deploy Elastic Cloud via GCP Marketplace. Motion embeddings (e.g. last-layer GAN features) are upserted into an index. We use Elastic’s REST API (via Python) to handle queries. This allows advanced search (filter by skeleton, style, etc.) and supports future Gemini or Vertex AI integration for advanced RAG (retrieval-augmented) queries.
 
-**Fivetran Connector:** The connector is written in Python using Fivetran’s SDK. As per hackathon rules, it authenticates to the data source (e.g. a sample Swiss Vault or  AWS S3 bucket of BVH, FBX or TRC files) and periodically syncs into BigQuery[5]. Metadata (timestamps, motion labels) are also ingested to aid search.
+3. **Fivetran Connector:** The connector is written in Python using Fivetran’s SDK. As per hackathon rules, it authenticates to the data source (e.g. a sample Swiss Vault or  AWS S3 bucket of BVH, FBX or TRC files) and periodically syncs into BigQuery[5]. Metadata (timestamps, motion labels) are also ingested to aid search.
 
 #**Evaluation & Results**
 
