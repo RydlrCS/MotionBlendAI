@@ -1,0 +1,17 @@
+project/
+├── fivetran_connector/
+│   └── PoseStreamConnector.py       # Fivetran SDK connector code
+│
+├── ganimator/
+│   ├── train.py                    # PyTorch training script for GANimator
+│   └── infer.py                    # PyTorch inference script (generates motions)
+│
+├── elastic_search/
+│   ├── app.py                      # Flask API for vector search
+│   ├── requirements.txt            # Python deps (Flask, elasticsearch, etc.)
+│   └── static/                     
+│       └── index.html              # (Optional) Front-end UI (React or plain HTML)
+│
+└── vertex_pipeline/
+    ├── pipeline.py                 # KFP pipeline definition (as above)
+    └── pipeline.yaml               # Compiled pipeline spec for Vertex AI
