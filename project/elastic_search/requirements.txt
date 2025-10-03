@@ -1,5 +1,6 @@
 # Python dependencies for elastic_search
 Flask
 elasticsearch
+sentence-transformers
 # For Google Cloud Storage integration
 google-cloud-storage
