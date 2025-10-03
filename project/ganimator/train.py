@@ -1,37 +1,45 @@
-
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
 # (Define your GAN model, e.g., a Generator and Discriminator.)
 class Generator(nn.Module):
-	def __init__(self, *args, **kwargs):
-		super().__init__()
-		# define layers...
-		self.linear = nn.Linear(10, 10)  # dummy layer
-		# produce a motion sequence
-		return self.linear(noise)
+    """
+    Minimal dummy generator for motion synthesis.
+    Replace with your actual GAN model for real use.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        # Dummy linear layer: input and output are both 10-dimensional
+        self.linear = nn.Linear(10, 10)
+    def forward(self, noise):
+        # Forward pass: produce a motion sequence (dummy output)
+        return self.linear(noise)
+
+# Minimal stubs for testing
+latent_dim = 10  # Size of the noise vector
+num_epochs = 1   # Number of training epochs
+training_sequences = [torch.randn(10) for _ in range(4)]  # Dummy dataset
 
 generator = Generator()
 optimizer = torch.optim.Adam(generator.parameters(), lr=1e-3)
-latent_dim = 10
-num_epochs = 1
-training_sequences = [torch.randn(10) for _ in range(4)]
-loss_fn = nn.MSELoss()  # placeholder for GAN-specific loss
+loss_fn = nn.MSELoss()  # Placeholder for GAN-specific loss
 
-# Assume `training_sequences` is a dataset of real motion sequences
 dataloader = DataLoader(training_sequences, batch_size=2, shuffle=True)
 
+# Training loop
 for epoch in range(num_epochs):
-	for real_seq in dataloader:
-		optimizer.zero_grad()
-		noise = torch.randn(real_seq.size(0), latent_dim)
-		generated_seq = generator(noise)
-		# synthesize motion
-		loss = loss_fn(generated_seq, real_seq)
-		# loss or adversarial
-		loss.backward()
-		optimizer.step()
+    for real_seq in dataloader:
+        optimizer.zero_grad()
+        # Generate random noise for the generator
+        noise = torch.randn(real_seq.size(0), latent_dim)
+        # Generate a fake motion sequence
+        generated_seq = generator(noise)
+        # Compute loss (dummy: MSE between generated and real)
+        loss = loss_fn(generated_seq, real_seq)
+        # Backpropagation and optimization
+        loss.backward()
+        optimizer.step()
 
 # Note: This is a conceptual skeleton. In practice, use specialized losses and data loaders for BVH files.
 
