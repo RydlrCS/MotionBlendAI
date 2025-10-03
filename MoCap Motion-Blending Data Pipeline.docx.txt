@@ -70,37 +70,46 @@ We leverage Google Cloud services for orchestration, storage, and APIs:
 * Cloud Functions / Pub/Sub: We use Cloud Functions (event-driven) to glue components. For instance, on each BigQuery insert or on a schedule, a function could extract new motion records and kick off training. As shown in the GCP docs, one can “trigger a pipeline run using an Event-Driven Cloud Function with a Cloud Pub/Sub trigger”[11]. The UI screenshot below shows creating a Cloud Function with a Pub/Sub trigger (here called “my-scheduled-pipeline-function”). This ensures our ML workflow is serverless and automated.
 * Cloud Run (optional): For serving APIs (e.g. the search endpoint or blending API), we can deploy stateless containerized microservices. For example, a search_api service that queries Elasticsearch can run on Cloud Run behind an HTTP endpoint. This provides low-latency inference.
 * BigQuery: Ingests raw MoCap frames via Fivetran. We also use it for simple queries or analytics (e.g. count frames). By integrating BigQuery with Vertex AI (via pipeline components or Dataflow), we can include BigQuery as a data source if needed.
-Code Organization and Examples
-We structure the codebase into modules, following best practices for clarity:
-mocap-pipeline/
-├── connector/
-│   └── PoseStreamConnector.py      # Fivetran connector
-├── blending/
-│   ├── ganimator_blender.py        # SPADE-GANimator implementation
-│   └── spaade_layers.py
-├── search_api/
-│   └── search_service.py           # Elastic query API
-├── pipelines/
-│   ├── training_pipeline.py        # Vertex AI pipeline definition
-│   └── utils.py
-├── config/
-│   ├── requirements.txt
-│   └── connector_config.json
-└── README.md
-* PoseStreamConnector.py: As shown above, it subclasses Fivetran’s Connector to yield frame records. It includes connection logic to the MoCap hardware or SDK.
-* ganimator_blender.py: Contains the GANimatorBlender class. It loads the trained model (from a GCS path) and implements a blend() function that takes two sequences and a blending factor, returning a new motion sequence.
-* search_service.py: Implements an HTTP server (Flask or FastAPI) that accepts search requests, computes query vectors (e.g. via a small embedding model), and queries Elastic. For example, it might use the official Python client:
-* from elasticsearch import Elasticsearch
-es = Elasticsearch([...])
-def query_motions(text_query):
-    q_vec = embed_text(text_query)  # e.g. SentenceTransformer
-    res = es.search(index="motions", body={
-        "knn": {"vector": q_vec, "k": 5},
-        "query": {"match": {"description": text_query}}
-    })
-    return res["hits"]["hits"]
-   * training_pipeline.py: Defines a Vertex AI pipeline using the Kubeflow SDK. Components might include: export_data_from_bigquery, train_ganimator_model, save_model_to_gcs. This file compiles to YAML and is uploaded to Cloud Storage. We trigger it via a Cloud Function (as in the earlier screenshot).
-   * requirements.txt: Python dependencies (e.g. fivetran-connector-sdk, torch, elasticsearch, etc.).
+File structure (repository)
+Below is the actual file/folder layout in this workspace. Keep this section up-to-date when you add/remove modules.
+
+Root files:
+- `Code samples.txt`                # Code samples and snippets used to populate modules
+- `file structure.graphql`          # (placeholder)
+- `LICENSE`
+- `README.md`
+- `MoCap Motion-Blending Data Pipeline.docx.txt`  # This documentation
+
+`project/` folder (main source):
+- `project/fivetran_connector/`
+  - `PoseStreamConnector.py`       # Fivetran connector implementation (streaming ingest)
+- `project/ganimator/`
+  - `train.py`                     # GANimator training skeleton and example
+  - `infer.py`                     # GANimator inference example
+- `project/elastic_search/`
+  - `app.py`                       # Flask API for hybrid vector+keyword search
+  - `requirements.txt`             # deps for the elastic search service
+  - `static/index.html`             # optional UI
+- `project/vertex_pipeline/`
+  - `pipeline.py`                  # KFP/Vertex pipeline definition and helpers
+  - `pipeline.yaml`                # compiled pipeline spec (placeholder)
+- `project/blending/`
+  - `ganimator_blender.py`         # SPADE-GANimator blender implementation
+- `project/search_api/`
+  - `search_service.py`            # Flask search API that calls Elasticsearch
+
+Notes:
+- `Code samples.txt` contains the original code snippets used to create skeletons for these modules; use it as the source of truth for sample code when expanding features.
+- To regenerate `pipeline.yaml`, run the compiler in `project/vertex_pipeline/pipeline.py` (this produces a compiled Argo/Workflow YAML ready for Vertex AI).
+- Keep GCS bucket names and GCP project IDs in environment variables or a `config/connector_config.json` file (not checked into the repo for secrets).
+
+Summary of key modules:
+- `project/fivetran_connector/PoseStreamConnector.py`: Custom Fivetran connector for real-time MoCap streaming into BigQuery.
+- `project/blending/ganimator_blender.py`: Loads model artifacts from GCS and exposes `blend(seq1, seq2, mix_ratio)` to produce blended motions.
+- `project/search_api/search_service.py`: Search API that computes an embedding for the query and performs a hybrid search against Elasticsearch (vector + keyword).
+- `project/vertex_pipeline/pipeline.py`: Orchestrates dataset export, training, and model registration on Vertex AI.
+
+Please update this section when you add new modules or change paths.
 GPU Selection and Hardware Constraints
 Given the 10 kW per rack power limit (100 kW total for 10 racks) and networking/storage overhead, we must choose energy-efficient GPUs. Modern AI racks can reach 30–100+ kW[1], so our budget is conservative. Off-the-shelf GPUs include:
    * NVIDIA A100: 40 GB HBM2e, up to 312 TFLOPS (FP16) at 250 W[14][2]. This yields ~1.25 TFLOPS/W. A full rack (10 kW) could house ~40 A100s (10 kW / 0.25 kW each), though practical racks with servers might hold ~20–30 GPUs plus overhead. A100 supports Multi-Instance GPU (MIG) to subdivide into smaller slices[15].
