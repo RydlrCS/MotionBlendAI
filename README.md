@@ -12,6 +12,7 @@ Creating lifelike character animations requires smoothly transitioning between d
 **Solution Overview**
 
 **MotionBlendAI consists of three main components, orchestrated on GCP:**
+
 **Data Ingestion (Fivetran):** We build a custom connector using the Fivetran Connector SDK to stream raw MoCap data (e.g. BVH files, sensor feeds) into Google Cloud (BigQuery or Cloud Storage)[5]. Fivetran “simplifies moving data” and “ensures your data teams always have fresh data”[7], so this automated pipeline ingests new motion sequences with minimal overhead.
 
 **Motion Blending Model:** On Vertex AI (using GPU machines), we train and serve a GANimator-inspired model enhanced with a SPADE-like temporal conditioning layer[8]. The model represents each motion as a frame-by-frame matrix and uses skeleton-aware convolutions to learn motion patterns. Critically, during inference we feed a blended “skeleton identity” map that switches from one motion ID to another midway, causing the network to generate a smooth transition in one shot[9]. This single-pass blending avoids expensive multi-step inference or retraining, yielding plausible animations on-demand[3][4]. By training once on all inputs (each in a separate batch) and using noise + ID conditioning, the model learns how to interpolate between motions while preserving foot contacts and dynamics.
@@ -75,18 +76,24 @@ Sources: Hackathon guidelines and partner docs[1][2]; Fivetran and Elastic techn
 
 [1] [5] [7] [12] [17] Ignite innovation in the AI Accelerate Google Cloud Multi-Partner Hackathon
 https://info.devpost.com/blog/ai-accelerate-google-cloud-hackathon
+
 [2] [10] [13] AI Accelerate: Unlocking New Frontiers: Unlocking New Frontiers: A Multi-Partner Google Cloud Hackathon - Devpost
 https://ai-accelerate.devpost.com/
+
 [3] [8] [9] [Literature Review] Controllable Single-shot Animation Blending with Temporal Conditioning
 https://www.themoonlight.io/en/review/controllable-single-shot-animation-blending-with-temporal-conditioning
+
 [4] [16] (PDF) Controllable Single-shot Animation Blending with Temporal Conditioning
 https://www.researchgate.net/publication/394978742_Controllable_Single-shot_Animation_Blending_with_Temporal_Conditioning
+
 [6] Elasticsearch: The Official Distributed Search & Analytics Engine | Elastic
 https://www.elastic.co/elasticsearch
+
 [11] NVIDIA | Google Cloud
 https://cloud.google.com/nvidia
+
 [14] Use Google Cloud with Fivetran
 https://www.fivetran.com/partners/technology/google-cloud
+
 [15] Introduction to Vertex AI Pipelines  |  Google Cloud
 https://cloud.google.com/vertex-ai/docs/pipelines/introduction
-
