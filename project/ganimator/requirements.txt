@@ -1,0 +1,2 @@
+# Intentionally empty for now - heavy ML deps installed on host/CI only
+# Add GANimator-specific runtime dependencies here if/when needed

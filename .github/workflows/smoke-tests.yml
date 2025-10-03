@@ -88,9 +88,7 @@ jobs:
       - name: Start search service
         run: |
           nohup python3 project/search_api/search_service.py > search_service.log 2>&1 &
-          # give the service a few seconds to register
-          sleep 8
 
-      - name: Run smoke runner (integration)
+      - name: Run integration checks
         run: |
-          python3 project/tests/smoke_run.py
+          python3 project/tests/integration_check.py

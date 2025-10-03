@@ -3,6 +3,8 @@ Search API for hybrid (vector+keyword) search over MoCap motions using Elasticse
 Implements rate limiting and embedding as per documentation.
 """
 from flask import Flask, request, jsonify
+import logging
+from typing import Any, Dict, List, Optional
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
 import time
 import threading
@@ -10,12 +12,21 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+import os
 
 
 def create_es_client():
+    # Allow containerized service to talk to the compose service by name.
+    host = os.environ.get('ELASTICSEARCH_HOST', 'elasticsearch')
+    port = int(os.environ.get('ELASTICSEARCH_PORT', '9200'))
+    # Ask for compatibility with ES 8 to avoid media-type mismatches with newer python clients.
     return Elasticsearch(
-        [{"host": "localhost", "port": 9200, "scheme": "http"}],
-        headers={"Accept": "application/vnd.elasticsearch+json;compatible-with=8"}
+        [{"host": host, "port": port, "scheme": "http"}],
+        headers={"Accept": "application/vnd.elasticsearch+json; compatible-with=8"}
     )
 
 
@@ -49,13 +60,21 @@ try:
 except Exception:
     embed_model = None
 
-def embed_text(text):
+def embed_text(text: Optional[str]) -> List[float]:
     """Return a dense float list embedding for the given text.
     Falls back to a simple hashing vector if the model is unavailable.
+    Empty or None text yields a deterministic zero-like vector.
     """
+    if not text:
+        # deterministic small-value vector for empty input
+        rng = np.random.RandomState(0)
+        return (rng.rand(384) * 0.001).tolist()
     if embed_model is not None:
-        vec = embed_model.encode(text)
-        return vec.tolist() if isinstance(vec, np.ndarray) else list(vec)
+        try:
+            vec = embed_model.encode(text)
+            return vec.tolist() if isinstance(vec, np.ndarray) else list(vec)
+        except Exception as ex:
+            logger.exception('embedding model failed, falling back to pseudo-embedding')
     # fallback: simple deterministic pseudo-embedding
     rng = np.random.RandomState(abs(hash(text)) % (2**32))
     return rng.rand(384).tolist()
@@ -76,11 +95,15 @@ def ensure_index_and_seed():
                 "mappings": {
                     "properties": {
                         "description": {"type": "text"},
-                        "motion_vector": {"type": "dense_vector", "dims": 384}
+                        "motion_vector": {"type": "dense_vector", "dims": 384},
+                        "source_file": {"type": "keyword"}
                     }
                 }
             }
-            es_client.indices.create(index=index_name, body=mapping)
+            # Create with 1 shard and 0 replicas for single-node environments.
+            settings = {"settings": {"number_of_shards": 1, "number_of_replicas": 0}}
+            body = {**mapping, **settings}
+            es_client.indices.create(index=index_name, body=body)
             # Seed a few example documents
             samples = [
                 {"description": "walking into a jump", "motion_vector": embed_text("walking into a jump")},
@@ -91,9 +114,16 @@ def ensure_index_and_seed():
                 # ensure id is a string
                 es_client.index(index=index_name, id=str(i+1), body=doc)
             try:
+                # ensure index is fully available in single-node by refreshing
                 ref = getattr(es_client.indices, 'refresh', None)
                 if callable(ref):
                     ref(index=index_name)
+            except Exception:
+                pass
+        else:
+            # if the index exists on a single-node cluster, ensure replicas=0 to avoid unassigned shards
+            try:
+                es_client.indices.put_settings(index=index_name, body={"index": {"number_of_replicas": 0}})
             except Exception:
                 pass
     except es_exceptions.ElasticsearchException:
@@ -104,9 +134,9 @@ def ensure_index_and_seed():
 @app.route('/search', methods=['POST'])
 def search():
     rate_limited()
-    req = request.get_json()
-    text_query = req.get('text_query')
-    k = req.get('k', 5)
+    req: Dict[str, Any] = request.get_json() or {}
+    text_query: str = req.get('text_query', '')
+    k: int = int(req.get('k', 5) or 5)
     q_vec = embed_text(text_query)
     try:
         # Use k-NN vector search if supported
@@ -131,6 +161,7 @@ def search():
             res = es_client.search(index="motions", body={"query": {"match": {"description": text_query}}, "size": k})
             return jsonify(res.get("hits", {}).get("hits", []))
         except Exception:
+            logger.exception('both vector and keyword search failed')
             return jsonify({"hits": [], "warning": f"Elasticsearch unavailable: {e}"}), 200
 
 
@@ -174,12 +205,15 @@ register_startup()
 def seed_endpoint():
     payload = request.get_json() or {}
     folder = payload.get('folder', 'project/seed_motions')
+    max_files = payload.get('max_files')
+    dry_run = bool(payload.get('dry_run', False))
     try:
         from scripts import seed_motions
         es_client = get_es_client()
-        seed_motions.seed_from_folder(folder, es_client=es_client)
+        seed_motions.seed_from_folder(folder, es_client=es_client, max_files=max_files, dry_run=dry_run)
         return jsonify({'status': 'seeded', 'folder': folder}), 200
     except Exception as e:
+        logger.exception('seeding failed')
         return jsonify({'status': 'error', 'error': str(e)}), 500
 
 if __name__ == '__main__':

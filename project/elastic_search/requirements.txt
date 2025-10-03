@@ -1,6 +1,6 @@
 # Python dependencies for elastic_search (pinned for reproducible installs)
 Flask==2.3.3
-elasticsearch==8.10.2
+elasticsearch==8.10.1
 sentence-transformers==2.2.2
 # For Google Cloud Storage integration
 google-cloud-storage==2.11.0
