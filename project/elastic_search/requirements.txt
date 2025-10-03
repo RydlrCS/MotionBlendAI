@@ -1,6 +1,9 @@
-# Python dependencies for elastic_search
-Flask
-elasticsearch
-sentence-transformers
+# Python dependencies for elastic_search (pinned for reproducible installs)
+Flask==2.3.3
+elasticsearch==8.10.2
+sentence-transformers==2.2.2
 # For Google Cloud Storage integration
-google-cloud-storage
+google-cloud-storage==2.11.0
+
+# Production WSGI server
+gunicorn==21.2.0
