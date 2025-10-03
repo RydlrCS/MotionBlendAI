@@ -97,3 +97,29 @@ https://www.fivetran.com/partners/technology/google-cloud
 
 [15] Introduction to Vertex AI Pipelines  |  Google Cloud
 https://cloud.google.com/vertex-ai/docs/pipelines/introduction
+
+## Local testing (Docker)
+
+We provide a `docker-compose.yml` that starts a single-node Elasticsearch and the local `search_api` service for end-to-end testing.
+
+Run locally:
+
+```bash
+docker compose up --build
+```
+
+Seed sample motions into Elasticsearch (after ES is up):
+
+```bash
+python3 scripts/seed_motions.py
+```
+
+Then test the search API:
+
+```bash
+curl -X POST -H "Content-Type: application/json" \
+	-d '{"text_query":"walk into jump","k":3}' \
+	http://127.0.0.1:8080/search
+```
+
+If Docker is not available on your machine, use the GitHub Actions `smoke-tests` workflow which runs Elasticsearch as a service and executes the smoke tests automatically on push to `main`.
