@@ -1,0 +1,147 @@
+﻿PROTOTYPES & TESTING  
+MoCap Motion-Blending Pipeline with Elastic & Fivetran on GCP
+Overview: This solution addresses the Google Cloud AI Accelerate Hackathon’s Elastic (hybrid search) and Fivetran (streaming) challenge tracks by building an end-to-end motion-capture (MoCap) pipeline on GCP. We ingest real-time MoCap frames via a custom Fivetran Connector into BigQuery, train and deploy a SPADE‑GANimator single-shot motion-blending model on Vertex AI, and index results in Elasticsearch for hybrid (vector+keyword) retrieval. The architecture uses Vertex AI Pipelines, Cloud Storage, Cloud Functions (and Cloud Run) for orchestration. The code is organized into modules (see File Structure). We carefully choose GPUs (e.g. NVIDIA A100/H100) to meet the 10 kW/rack power constraint[1][2][3], and we discuss trade-offs for cost, latency, and reliability.
+Architecture Overview
+* Data Ingestion: A Python-based Fivetran Connector (PoseStreamConnector.py) continuously reads MoCap frames (e.g. skeleton joint data) and streams them into BigQuery in real time[4][5]. BigQuery serves as the raw data store.
+* Model Training & Inference: We use Vertex AI Pipelines to orchestrate training and inference. Raw frames are exported from BigQuery and stored (and versioned) in Cloud Storage[6][7]. The SPADE‑GANimator model is trained on example motion pairs (using Vertex AI custom training) and then deployed for inference (e.g. via a Vertex AI endpoint or Cloud Run service).
+* Motion Blending: A custom blending module (based on the SPADE-GANimator architecture[8]) generates blended transition motions from input sequences. At inference, two input motions plus a temporal “mix” parameter feed into the GANimator to produce smooth interpolations. The blended sequences (skeleton trajectories) are stored back into Cloud Storage and optionally appended to BigQuery for record-keeping.
+* Elastic Hybrid Search: We embed each motion sequence (e.g. via a learned model or key-point vector) and index those embeddings plus metadata (labels, timestamps, performer IDs) into Elasticsearch. Elastic’s new vector DB support allows hybrid search (combining sparse keywords and dense vectors)[9]. This enables a chat-style or agent-based interface: user queries (e.g. text or example motion) retrieve semantically similar motions. Elasticsearch integration with Vertex AI (now a native grounding engine[10]) means we can call Elastic from Vertex pipelines or use Vertex AI Search (RAG) to assemble answers.
+  
+
+
+Figure: Configuring a Cloud Function with a Pub/Sub trigger in the GCP Console. We use event-driven Cloud Functions and Pub/Sub to kick off Vertex AI pipelines on new data[11] (e.g. start training when enough frames are collected).
+Real-time MoCap Ingestion (Fivetran Connector)
+We implement a custom Fivetran Connector using the Python Connector SDK[4]. This connector (e.g. PoseStreamConnector.py) contains a Connector subclass that, in its sync() method, polls the motion-capture system for new frames and yields records. Each record might include a timestamp and joint positions. Fivetran then takes these records and replicates them to BigQuery (or any supported destination)[5]. This leverages Fivetran’s managed infra so we don’t build our own ingestion pipeline. Sample code structure:
+# PoseStreamConnector.py
+from fivetran_connector import Connector
+
+class PoseStreamConnector(Connector):
+    def __init__(self, config):
+        super().__init__(config)
+        self.device = connect_to_mocap_system(config["endpoint"])
+    def sync(self):
+        while True:
+            frame = self.device.get_next_frame()  # blocks until next frame
+            if frame is None:
+                break
+            # Yield a dictionary matching target BigQuery schema
+            yield {
+                "timestamp": frame.timestamp,
+                "joints": frame.joint_positions  # e.g. list of (x,y,z) coords
+            }
+We include in the connector configuration the BigQuery table details. Fivetran handles batching and retry to deliver data securely to BigQuery[4]. This satisfies the Fivetran challenge by streaming every frame of MoCap data into a cloud warehouse.
+Motion Blending Model (SPADE‑GANimator)
+For motion blending, we adopt the SPADE-GANimator approach from recent research[8]. The model learns from one or more example motion sequences and generates smooth transitions at a specified time frame. We build a Python module (e.g. ganimator_blender.py) that loads a trained GANimator model (stored in Cloud Storage) and provides a blend(seq1, seq2, t) function. Simplified pseudocode:
+# ganimator_blender.py
+import torch
+class GANimatorBlender:
+    def __init__(self, model_path):
+        self.model = torch.load(model_path)  # Vertex AI can push model files to Cloud Storage
+    def blend(self, seq1, seq2, mix_ratio):
+        # Create one-hot skeleton_id tensor for SPADE conditioning
+        identity_map = create_identity_map(seq1, seq2, mix_ratio)
+        # Run generator network to produce blended motion
+        blended = self.model.generate([seq1, seq2, identity_map])
+        return blended
+The key idea is to use SPADE (Spatially-Adaptive Denormalization) layers in the GAN to condition on a skeleton identity map[12]. During training on Vertex AI, we prepare pairs of motions and train the model stages sequentially (coarse-to-fine) as in GANimator[13]. Vertex AI Pipelines orchestrate this: one step reads prepared motion data from Cloud Storage/BigQuery, another step runs the custom training container, then a final step registers the trained model. For inference, we can either use a Vertex AI endpoint or containerized service. The blended output sequences are saved (e.g. back to BigQuery or Cloud Storage) for logging and search.
+Elastic Vector Search Integration
+We index motion metadata and embeddings in Elasticsearch to enable hybrid search. For each motion (raw or blended), we compute: - A dense vector embedding (e.g. from an autoencoder or transformer over the joint sequence). - Sparse metadata fields (e.g. text labels, timestamps, skeleton type).
+Elasticsearch’s vector database supports combining both types of queries[9]. Using its new integration with Vertex AI, we treat Elasticsearch as a grounding engine: Vertex AI Search can query the Elastic index directly without extra orchestration[10]. Alternatively, we build a search API (in Cloud Run) that accepts a free-text or example query, transforms it to an embedding, and calls Elastic’s _search with a hybrid query.
+For example, a hybrid KNN+keyword query in Elasticsearch can be written as:
+POST /motions/_search
+{
+  "query": {
+    "knn": {
+      "vector_field": {
+        "vector": [0.12, 0.34, ...],
+        "k": 5
+      }
+    }
+  },
+  "highlight": {
+    "fields": {"description": {}}
+  }
+}
+This finds the top-𝑘 motions by vector similarity. We also support lexical filters (e.g. “match”: {"action": "run"}) in the same query if needed. Elastic hybrid search blends the results of sparse (e.g. BM25) and dense queries[9]. For chat-style interaction, a user’s natural language prompt is first converted to an embedding (using the same model as for motions) or used as a search term, and Elastic returns the most relevant motion segments. We then feed those segments into an LLM or a custom agent for further dialog or recommendation.
+GCP Orchestration & Infrastructure
+We leverage Google Cloud services for orchestration, storage, and APIs:
+* Vertex AI Pipelines: Define a Kubeflow-based pipeline with stages for data prep, training, and deployment. For example, a pipeline YAML is compiled by kfp and stored in Cloud Storage[11]. We deploy a Cloud Run (or Functions) endpoint triggered by a Pub/Sub message to start the pipeline whenever new data arrives or on a schedule[11]. The flow is: MoCap data → BigQuery; when enough data accumulates, a Cloud Function publishes to Pub/Sub; the function triggers the Vertex pipeline to train or fine-tune the GANimator model[11].
+* Cloud Storage: Used for raw data, model artifacts, and checkpoints. We follow best practices: store large unstructured data (video or motion tensors) and training outputs on Cloud Storage[6]. Model binaries and checkpoints are also saved to GCS for versioning[7].
+* Cloud Functions / Pub/Sub: We use Cloud Functions (event-driven) to glue components. For instance, on each BigQuery insert or on a schedule, a function could extract new motion records and kick off training. As shown in the GCP docs, one can “trigger a pipeline run using an Event-Driven Cloud Function with a Cloud Pub/Sub trigger”[11]. The UI screenshot below shows creating a Cloud Function with a Pub/Sub trigger (here called “my-scheduled-pipeline-function”). This ensures our ML workflow is serverless and automated.
+* Cloud Run (optional): For serving APIs (e.g. the search endpoint or blending API), we can deploy stateless containerized microservices. For example, a search_api service that queries Elasticsearch can run on Cloud Run behind an HTTP endpoint. This provides low-latency inference.
+* BigQuery: Ingests raw MoCap frames via Fivetran. We also use it for simple queries or analytics (e.g. count frames). By integrating BigQuery with Vertex AI (via pipeline components or Dataflow), we can include BigQuery as a data source if needed.
+Code Organization and Examples
+We structure the codebase into modules, following best practices for clarity:
+mocap-pipeline/
+├── connector/
+│   └── PoseStreamConnector.py      # Fivetran connector
+├── blending/
+│   ├── ganimator_blender.py        # SPADE-GANimator implementation
+│   └── spaade_layers.py
+├── search_api/
+│   └── search_service.py           # Elastic query API
+├── pipelines/
+│   ├── training_pipeline.py        # Vertex AI pipeline definition
+│   └── utils.py
+├── config/
+│   ├── requirements.txt
+│   └── connector_config.json
+└── README.md
+* PoseStreamConnector.py: As shown above, it subclasses Fivetran’s Connector to yield frame records. It includes connection logic to the MoCap hardware or SDK.
+* ganimator_blender.py: Contains the GANimatorBlender class. It loads the trained model (from a GCS path) and implements a blend() function that takes two sequences and a blending factor, returning a new motion sequence.
+* search_service.py: Implements an HTTP server (Flask or FastAPI) that accepts search requests, computes query vectors (e.g. via a small embedding model), and queries Elastic. For example, it might use the official Python client:
+* from elasticsearch import Elasticsearch
+es = Elasticsearch([...])
+def query_motions(text_query):
+    q_vec = embed_text(text_query)  # e.g. SentenceTransformer
+    res = es.search(index="motions", body={
+        "knn": {"vector": q_vec, "k": 5},
+        "query": {"match": {"description": text_query}}
+    })
+    return res["hits"]["hits"]
+   * training_pipeline.py: Defines a Vertex AI pipeline using the Kubeflow SDK. Components might include: export_data_from_bigquery, train_ganimator_model, save_model_to_gcs. This file compiles to YAML and is uploaded to Cloud Storage. We trigger it via a Cloud Function (as in the earlier screenshot).
+   * requirements.txt: Python dependencies (e.g. fivetran-connector-sdk, torch, elasticsearch, etc.).
+GPU Selection and Hardware Constraints
+Given the 10 kW per rack power limit (100 kW total for 10 racks) and networking/storage overhead, we must choose energy-efficient GPUs. Modern AI racks can reach 30–100+ kW[1], so our budget is conservative. Off-the-shelf GPUs include:
+   * NVIDIA A100: 40 GB HBM2e, up to 312 TFLOPS (FP16) at 250 W[14][2]. This yields ~1.25 TFLOPS/W. A full rack (10 kW) could house ~40 A100s (10 kW / 0.25 kW each), though practical racks with servers might hold ~20–30 GPUs plus overhead. A100 supports Multi-Instance GPU (MIG) to subdivide into smaller slices[15].
+   * NVIDIA H100: 80 GB HBM3, ~1860 TFLOPS (TF32) at 350 W (SXM package) to 700 W (PCIe)[3]. This is roughly double A100’s throughput but also ~2–3× the power. H100’s FP16 efficiency is ~5.3 TFLOPS/W (much higher), but its overall TDP of 700 W means only ~10 per rack (7 kW), allowing more overhead. H100’s multi-instance features also boost utilization.
+   * Lower-power GPUs: For inference or smaller tasks, consider NVIDIA T4 (70 W, ~8 TFLOPS) or RTX A6000 (300 W). These consume less power and could serve embedding/inference services.
+Recommendation: For balanced training/inference, a mix of A100s is safe and widely available. E.g., 30×A100 uses ~7.5 kW, leaving ~2.5 kW for cooling/network. H100 can double performance per GPU but at higher rack-power usage. If ultra-high throughput is needed and power/cooling allow, a few H100s (e.g. 8×H100 ≈5.6 kW[16]) can be used for training large models, while A100s handle inference. All GPUs should be in GCP’s certified servers or similar setups.
+Trade-offs and Design Decisions
+   * Fivetran vs. Self-Built Ingestion: We chose Fivetran to save development and ops effort[4]. Its Connector SDK lets us write Python without managing servers. The trade-off is vendor lock-in and cost, but for a hackathon solution the speed and reliability justify it (Fivetran guarantees delivery to BigQuery, eliminating custom dev).
+   * BigQuery vs. Other Storage: BigQuery is fully managed, supports streaming inserts (via Fivetran) and fast SQL queries. We lose some control over indexing speed, but benefit from GCP integration (e.g. Vertex AI can easily consume BigQuery data). Its cost is pay-per-byte, which is acceptable for moderate MoCap data rates.
+   * Vertex AI vs. DIY Pipelines: Using Vertex AI Pipelines (with Kubeflow) simplifies ML orchestration and offers managed compute. The alternative (e.g. Kubernetes + Argo) would require more maintenance. Vertex is higher-level, supporting built-in scaling, Hyperparameter Tuning, and Model Registry. Its cost is proportional to usage (containers, GPUs), so we must optimize steps (e.g. delete unused jobs).
+   * Elastic vs. Other Vector Stores: Elasticsearch offers hybrid (sparse+dense) search out-of-the-box[9] and now integrates with Vertex AI[10]. Alternatives like Pinecone or FAISS would require separate management. Elastic’s familiarity and vector features (knn queries, RRF ranking) suit our hybrid chat-search use case. A trade-off is license (some features require Enterprise) and cluster cost. We mitigate by using Elastic Cloud or GCP marketplace AMIs.
+   * Cloud Functions vs. Cloud Run: We use Cloud Functions for event-driven triggers (cheap for light code). For long-lived or HTTP services (like search API), Cloud Run is better. Functions timeout (~15 min), so they’re used just to kick pipelines; heavy tasks run on Vertex or Cloud Run. This balances rapid response (Functions) with control (Run).
+   * GPU Performance vs. Power: A100s offer good perf/W and are common; H100s offer higher throughput but at much higher power draw[3][2]. We favor A100s to maximize the number of GPUs under 10 kW. If budget allows, mixing in a couple of H100 nodes for very large jobs is an option. All GPUs should be chosen for energy efficiency (e.g. latest Ampere/Hopper architectures).
+Devpost-Style Highlights
+Our project, MoBlendR, demonstrates innovative use of Elastic and Fivetran on Google Cloud:
+   * Hybrid Search-Enabled MoCap Browsing: Users can query motions semantically (e.g. “walking into a jump”), and Elastic returns matching sequences by combining text metadata with learned embeddings[9]. This meets the Elastic challenge for vector search. Integration with Vertex AI means we could even use Retrieval-Augmented Generation (RAG) to answer queries conversationally.
+   * Real-Time MoCap Streaming: Using Fivetran’s Connector SDK, we stream live motion-capture frames into BigQuery with minimal lag[4]. This pipeline is highly configurable (just change PoseStreamConnector logic), addressing the Fivetran challenge. No bespoke ETL infrastructure is needed.
+   * State-of-the-Art Blending Model: Our blending leverages the latest SPADE-GANimator single-shot method[8], allowing realistic transitions between any two motions. Training on Vertex AI ensures scalability and reproducibility.
+   * Serverless Orchestration: The solution is fully on GCP: Cloud Functions trigger Vertex Pipelines on new data[11], Cloud Storage holds all assets[6][7], and Cloud Run serves our APIs. This design is cost-aware and resilient (auto-scaling, managed services).
+   * Efficient Hardware Planning: Within the 10 kW/rack constraint, we recommend NVIDIA A100 GPUs (40 GB, 250 W) for a high-performance yet energy-efficient cluster[2]. For example, 30×A100 (~7.5 kW) fits one rack comfortably, leaving headroom for networking and storage power. We discuss H100 trade-offs (higher power but 2× throughput[3]) and suggest a mixed fleet or MIG usage if needed.
+   * File Structure & Code Samples: The repository is organized for clarity (see Code Organization section). Each component is modular (e.g. PoseStreamConnector.py, ganimator_blender.py, search_service.py), enabling rapid development and testing. We include sample code for key parts above and in comments for guidance.
+Summary: By combining Elastic’s new Vertex AI integration[10] with Fivetran’s Connector SDK[4], we deliver a polished hackathon submission that meets both challenge tracks. It showcases cutting-edge ML (SPADE-GANimator) and cloud-native engineering, packaged with clear code and architecture. This approach ensures low-latency inference and search, automated training pipelines, and compliance with the strict GPU power budget[1][3].
+References: We follow Google Cloud best practices (storing unstructured data and models in Cloud Storage[6][7], using Vertex AI Pipelines for ML orchestration[11]) and cite relevant sources for Elastic and Fivetran capabilities[10][4][9].
+________________
+
+
+[1] Electricity Demand and Grid Impacts of AI Data Centers: Challenges and Prospects
+https://arxiv.org/html/2509.07218v1
+[2] [14] [15] Discover NVIDIA A100 | Data Center GPUs | pny.com
+https://www.pny.com/nvidia-a100
+[3] [16] NVIDIA H100 Power Consumption Guide | TRG Datacenters
+https://www.trgdatacenters.com/resource/nvidia-h100-power-consumption/
+[4] [5] Connector SDK | Fivetran
+https://www.fivetran.com/connectors/connector-sdk
+[6] [7] Best practices for implementing machine learning on Google Cloud  |  Cloud Architecture Center
+https://cloud.google.com/architecture/ml-on-gcp-best-practices
+[8] [12] [13] Controllable Single-shot Animation Blending with Temporal Conditioning
+https://arxiv.org/html/2508.18525v1
+[9] Elasticsearch hybrid search - Elasticsearch Labs
+https://www.elastic.co/search-labs/blog/hybrid-search-elasticsearch
+[10]  Elastic - Elasticsearch Now Available as a Native Grounding Engine on Google Cloud’s Vertex AI Platform 
+https://ir.elastic.co/news/news-details/2025/Elasticsearch-Now-Available-as-a-Native-Grounding-Engine-on-Google-Clouds-Vertex-AI-Platform/default.aspx
+[11] Trigger a pipeline run with Pub/Sub  |  Vertex AI  |  Google Cloud
+https://cloud.google.com/vertex-ai/docs/pipelines/trigger-pubsub
