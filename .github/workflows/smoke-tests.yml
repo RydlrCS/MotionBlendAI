@@ -1,0 +1,40 @@
+name: Smoke tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    services:
+      elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch:8.10.2
+        ports:
+          - 9200:9200
+        options: >-
+          --health-cmd="curl -sS http://localhost:9200/_cluster/health | jq -e '.status == \"green\"'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r project/elastic_search/requirements.txt
+          pip install -r project/ganimator/requirements.txt || true
+      - name: Start search service
+        run: |
+          nohup python3 project/search_api/search_service.py > search_service.log 2>&1 &
+          sleep 5
+      - name: Run smoke tests
+        run: |
+          python3 project/tests/smoke_run.py
+*** End Patch
