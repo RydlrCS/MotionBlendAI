@@ -28,8 +28,11 @@ def trigger_vertex_pipeline(event, context=None):
             params = json.loads(payload)
         elif isinstance(event, dict):
             params = event  # direct call for testing
+        elif isinstance(event, str):
+            # Fallback: event is a raw JSON string
+            params = json.loads(event)
         else:
-            raise ValueError("Event must be a dictionary.")
+            raise ValueError("Event must be a dictionary or JSON string.")
 
         project = os.environ["PROJECT"]
         location = os.environ.get("LOCATION", "us-central1")
