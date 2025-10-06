@@ -1,80 +1,75 @@
+
 import kfp
-from google.cloud import aiplatform
-from google_cloud_pipeline_components.v1.dataset import ImageDatasetCreateOp
-from google_cloud_pipeline_components.v1.automl.training_job import AutoMLImageTrainingJobRunOp
-from google_cloud_pipeline_components.v1.endpoint import EndpointCreateOp, ModelDeployOp
+from kfp.v2.dsl import component, pipeline
 import os
-from blending.ganimator_blender import GANimatorBlender
+from google.cloud import storage
 
-@kfp.dsl.pipeline(
-    name="automl-image-training",
-    pipeline_root="gs://my-bucket/pipeline-root/") # type: ignore
-def pipeline(project_id: str):
+# --- Custom component to train SPADE-GANimator and upload model to GCS ---
+
+# Data prep step: download MoCap data from GCS to local path
+@component(base_image="python:3.9")
+def download_mocap_data(gcs_data_path: str, local_data_path: str) -> str:
     """
-    Vertex AI pipeline for AutoML image training and deployment.
-    Steps:
-      1. Create an AutoML dataset from CSV on GCS
-      2. Train an AutoML model using the dataset
-      3. Create an endpoint and deploy the trained model
+    Downloads a file from GCS to a local path for use in the pipeline.
+    """
+    from google.cloud import storage
+    import os
+    client = storage.Client()
+    bucket_name, blob_path = gcs_data_path.replace("gs://", "").split("/", 1)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_path)
+    os.makedirs(os.path.dirname(local_data_path), exist_ok=True)
+    blob.download_to_filename(local_data_path)
+    print(f"Downloaded {gcs_data_path} to {local_data_path}")
+    return local_data_path
+
+# Training step: run train.py and upload model to GCS
+@component(base_image="python:3.9")
+def train_and_upload_model(model_local_path: str, gcs_model_path: str, local_data_path: str) -> str:
+    import subprocess
+    import os
+    # Run the training script, passing the local data path as an env var
+    env = os.environ.copy()
+    env["MOCAP_DATA_PATH"] = local_data_path
+    subprocess.run(["python3", "project/ganimator/train.py"], check=True, env=env)
+    # Upload the model to GCS
+    from google.cloud import storage
+    client = storage.Client()
+    bucket_name, blob_path = gcs_model_path.replace("gs://", "").split("/", 1)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_path)
+    blob.upload_from_filename(model_local_path)
+    print(f"Uploaded model to {gcs_model_path}")
+    return gcs_model_path
+
+
+# --- MoCap SPADE-GANimator pipeline ---
+
+@pipeline(
+    name="mocap-ganimator-training",
+    pipeline_root="gs://my-bucket/pipeline-root/"
+)
+def mocap_ganimator_pipeline(gcs_data_path: str, gcs_model_path: str):
+    """
+    Pipeline steps:
+      1. Download MoCap data from GCS
+      2. Train SPADE-GANimator and upload model to GCS
     Args:
-        project_id (str): GCP project ID
+        gcs_data_path: GCS path to MoCap data file (e.g. .glb, .trc, or .npy)
+        gcs_model_path: GCS path to upload trained model
     """
-    # 1) Create an AutoML dataset from CSV on GCS
-    ds_op = ImageDatasetCreateOp(
-        project=project_id,
-        display_name="flowers-dataset",
-        gcs_source="gs://my-bucket/data.csv",
-        import_schema_uri=aiplatform.schema.dataset.ioformat.image.single_label_classification,
-    )
-    # 2) Train an AutoML model using the dataset
-    training_job = AutoMLImageTrainingJobRunOp(
-        project=project_id,
-        display_name="flowers-training-job",
-        prediction_type="classification",
-        model_type="CLOUD",
-        dataset=ds_op.outputs["dataset"],
-        model_display_name="flowers-model",
-    )
-    # 3) Create an endpoint and deploy the trained model
-    endpoint_op = EndpointCreateOp(project=project_id, display_name="flowers-endpoint")
-    ModelDeployOp(
-        model=training_job.outputs["model"],
-        endpoint=endpoint_op.outputs["endpoint"],
-        deployed_model_display_name="flowers-deployment",
-        automatic_resources_min_replica_count=1,
-        automatic_resources_max_replica_count=1,
-    )
+    local_data_path = "/tmp/mocap_data_file"
+    model_local_path = "models/ganimator_spade.pth"
+    data_prep = download_mocap_data(gcs_data_path=gcs_data_path, local_data_path=local_data_path)
+    train_and_upload_model(model_local_path=model_local_path, gcs_model_path=gcs_model_path, local_data_path=data_prep.output)
 
-def train_and_blend_pipeline(project_id, bucket_name, model_path):
-    """
-    Integrate the blending module into the pipeline.
-    This function demonstrates training and blending using the GANimatorBlender.
-    Args:
-        project_id (str): GCP project ID.
-        bucket_name (str): GCS bucket name for model storage.
-        model_path (str): Path to the model in GCS.
-    """
-    # Initialize the blender with the model from GCS
-    blender = GANimatorBlender(model_path=model_path, bucket_name=bucket_name)
-
-    # Example motion sequences (dummy data)
-    seq1 = torch.randn(1, 10)  # Replace with actual motion sequence
-    seq2 = torch.randn(1, 10)  # Replace with actual motion sequence
-    mix_ratio = 0.5  # Blend factor
-
-    # Perform blending
-    blended_motion = blender.blend(seq1, seq2, mix_ratio)
-    print("Blended Motion:", blended_motion)
 
 # Example usage
+
 if __name__ == "__main__":
-    PROJECT_ID = os.getenv("GCP_PROJECT_ID", "your-project-id")
-    BUCKET_NAME = os.getenv("GCS_BUCKET_NAME", "your-bucket-name")
-    MODEL_PATH = os.getenv("MODEL_PATH", "path/to/ganimator_model.pth")
-
-    train_and_blend_pipeline(PROJECT_ID, BUCKET_NAME, MODEL_PATH)
-
+    GCS_DATA_PATH = os.getenv("GCS_DATA_PATH", "gs://your-bucket/mocap_data/example.glb")
+    GCS_MODEL_PATH = os.getenv("GCS_MODEL_PATH", "gs://your-bucket/models/ganimator_spade.pth")
     # Compile the pipeline to a YAML for Vertex AI
     kfp.compiler.Compiler().compile(
-        pipeline_func=pipeline,
+        pipeline_func=mocap_ganimator_pipeline,
         package_path='pipeline.yaml')

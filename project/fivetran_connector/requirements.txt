@@ -1,0 +1,7 @@
+# Fivetran connector dependencies for MoCap ingestion
+# Core Google Cloud and API dependencies
+google-cloud-bigquery==3.17.2
+google-api-core==2.17.1
+requests==2.31.0
+# For local development and testing
+pytest==7.4.3

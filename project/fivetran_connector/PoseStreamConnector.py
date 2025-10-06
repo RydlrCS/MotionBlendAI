@@ -9,12 +9,31 @@ import json
 # hackathon demonstration, with detailed comments for each step.
 
 # --- Dummy base class for local testing (remove if using real Fivetran SDK) ---
+
+from google.cloud import bigquery
+from google.api_core.exceptions import GoogleAPIError
+
 class DummyConnector:
-    """A dummy base class to simulate Fivetran Connector for local testing."""
+    """A base class for Fivetran-style ingestion with real BigQuery integration."""
     def __init__(self, config: Dict[str, Any]):
         self.config = config
+        self.bq_client = bigquery.Client()
+        self.bq_table = config.get('bigquery_table')
+
     def load(self, record: Dict[str, Any]):
-        print("[LOAD] Record sent to BigQuery:", json.dumps(record)[:200])
+        """
+        Insert a record into BigQuery. Assumes table exists and schema matches record keys.
+        """
+        try:
+            errors = self.bq_client.insert_rows_json(self.bq_table, [record])
+            if errors:
+                print(f"[BigQuery] Insert errors: {errors}")
+            else:
+                print(f"[BigQuery] Inserted record at {record.get('timestamp')}")
+        except GoogleAPIError as e:
+            print(f"[BigQuery] API error: {e}")
+        except Exception as e:
+            print(f"[BigQuery] Unexpected error: {e}")
 
 # --- Main Connector Class ---
 class PoseStreamConnector(DummyConnector):
