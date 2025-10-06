@@ -7,13 +7,8 @@ Cloud Function to trigger Vertex AI Pipeline on new MoCap data event (Pub/Sub or
 import os
 import base64
 from google.cloud import aiplatform
-from google.cloud import pubsub_v1
-from flask import Request
 
-
-from typing import Union, Dict, Any
-
-def trigger_vertex_pipeline(event: Union[Dict[str, Any], str], context=None):
+def trigger_vertex_pipeline(event, context=None):
     """
     Cloud Function entry point for Pub/Sub trigger.
     Expects event with data: {
@@ -74,7 +69,7 @@ def trigger_vertex_pipeline(event: Union[Dict[str, Any], str], context=None):
 
     # ...existing code...
 # HTTP entry point for manual testing (for local or Cloud Functions HTTP trigger)
-def http_trigger(request: Request):
+def http_trigger(request):
     """
     HTTP trigger for manual testing (expects JSON body with pipeline params).
     """
