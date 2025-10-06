@@ -12,12 +12,12 @@ class TestVertexPipeline(unittest.TestCase):
 
     def test_pipeline_signature(self):
         """
-        Test that the pipeline has the correct input names for GCS paths.
+        Test that the pipeline has the correct input names for GCS and BigQuery paths.
         """
         from project.vertex_pipeline.pipeline import mocap_ganimator_pipeline
         input_names = list(mocap_ganimator_pipeline.component_spec.inputs.keys())
-        self.assertIn('gcs_data_path', input_names)
-        self.assertIn('gcs_model_path', input_names)
+        for required in ['pipeline_mode', 'gcs_data_path', 'bq_project', 'bq_dataset', 'bq_table', 'gcs_model_path']:
+            self.assertIn(required, input_names)
 
     def test_pipeline_components(self):
         """
