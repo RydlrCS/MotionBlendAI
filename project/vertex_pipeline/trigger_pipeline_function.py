@@ -11,7 +11,9 @@ from google.cloud import pubsub_v1
 from flask import Request
 
 
-def trigger_vertex_pipeline(event, context=None):
+from typing import Union, Dict, Any
+
+def trigger_vertex_pipeline(event: Union[Dict[str, Any], str], context=None):
     """
     Cloud Function entry point for Pub/Sub trigger.
     Expects event with data: {
@@ -26,11 +28,13 @@ def trigger_vertex_pipeline(event, context=None):
     import json
     try:
         # Decode Pub/Sub message
-        if 'data' in event:
+        if isinstance(event, dict) and 'data' in event:
             payload = base64.b64decode(event['data']).decode('utf-8')
             params = json.loads(payload)
-        else:
+        elif isinstance(event, dict):
             params = event  # direct call for testing
+        else:
+            raise ValueError("Event must be a dictionary.")
 
         project = os.environ["PROJECT"]
         location = os.environ.get("LOCATION", "us-central1")
@@ -68,7 +72,7 @@ def trigger_vertex_pipeline(event, context=None):
             "trace": traceback.format_exc()
         }, 500
 
-
+    # ...existing code...
 # HTTP entry point for manual testing (for local or Cloud Functions HTTP trigger)
 def http_trigger(request: Request):
     """

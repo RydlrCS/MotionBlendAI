@@ -6,37 +6,37 @@ metadata:
 spec:
 	entrypoint: pipeline
 	templates:
-	- name: pipeline
-		dag:
-			tasks:
-			- name: create-dataset
-				template: create-dataset
-			- name: train-model
-				template: train-model
-				dependencies: [create-dataset]
-			- name: create-endpoint
-				template: create-endpoint
-				dependencies: [train-model]
-			- name: deploy-model
-				template: deploy-model
-				dependencies: [create-endpoint]
-	- name: create-dataset
-		container:
-			image: gcr.io/google-containers/busybox
-			command: [sh, -c]
-			args: ['echo Creating dataset...']
-	- name: train-model
-		container:
-			image: gcr.io/google-containers/busybox
-			command: [sh, -c]
-			args: ['echo Training model...']
-	- name: create-endpoint
-		container:
-			image: gcr.io/google-containers/busybox
-			command: [sh, -c]
-			args: ['echo Creating endpoint...']
-	- name: deploy-model
-		container:
-			image: gcr.io/google-containers/busybox
-			command: [sh, -c]
-			args: ['echo Deploying model...']
+		- name: pipeline
+			dag:
+				tasks:
+					- name: create-dataset
+						template: create-dataset
+					- name: train-model
+						template: train-model
+						dependencies: [create-dataset]
+					- name: create-endpoint
+						template: create-endpoint
+						dependencies: [train-model]
+					- name: deploy-model
+						template: deploy-model
+						dependencies: [create-endpoint]
+		- name: create-dataset
+			container:
+				image: gcr.io/google-containers/busybox
+				command: [sh, -c]
+				args: ['echo Creating dataset...']
+		- name: train-model
+			container:
+				image: gcr.io/google-containers/busybox
+				command: [sh, -c]
+				args: ['echo Training model...']
+		- name: create-endpoint
+			container:
+				image: gcr.io/google-containers/busybox
+				command: [sh, -c]
+				args: ['echo Creating endpoint...']
+		- name: deploy-model
+			container:
+				image: gcr.io/google-containers/busybox
+				command: [sh, -c]
+				args: ['echo Deploying model...']
