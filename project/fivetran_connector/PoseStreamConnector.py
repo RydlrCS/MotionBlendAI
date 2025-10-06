@@ -8,16 +8,12 @@ import json
 # from the Moverse API or from local BVH, FBX, TRC files. It is designed for clarity and
 # hackathon demonstration, with detailed comments for each step.
 
-import os
-import time
-import json
-
 # --- Dummy base class for local testing (remove if using real Fivetran SDK) ---
 class DummyConnector:
     """A dummy base class to simulate Fivetran Connector for local testing."""
-    def __init__(self, config):
+    def __init__(self, config: Dict[str, Any]):
         self.config = config
-    def load(self, record):
+    def load(self, record: Dict[str, Any]):
         print("[LOAD] Record sent to BigQuery:", json.dumps(record)[:200])
 
 # --- Main Connector Class ---
@@ -27,7 +23,7 @@ class PoseStreamConnector(DummyConnector):
     - Real-time mode: fetches frames from Moverse API.
     - Batch mode: parses BVH, FBX, TRC files from a folder.
     """
-    def __init__(self, config):
+    def __init__(self, config: Dict[str, Any]):
         super().__init__(config)
         # API and mode configuration
         self.api_url = config.get('moverse_api_url')
@@ -89,7 +85,7 @@ class PoseStreamConnector(DummyConnector):
                     self.load(processed)
 
 # --- Preprocessing and Parsing Utilities ---
-def preprocess_frame(frame):
+def preprocess_frame(frame: Dict[str, Any]) -> Dict[str, Any]:
     """
     Normalize and filter frame data for BigQuery schema.
     Ensures keys: timestamp, joints, meta.
@@ -101,7 +97,7 @@ def preprocess_frame(frame):
     }
     return out
 
-def parse_motion_file(file_path, ext):
+def parse_motion_file(file_path: str, ext: str) -> Optional[Dict[str, Any]]:
     """
     Parse a motion file (BVH, FBX, TRC) and extract a frame or sequence.
     Returns a dict or None if parse fails.
@@ -117,7 +113,9 @@ def parse_motion_file(file_path, ext):
         print(f"[Moverse] Failed to parse {file_path}: {e}")
     return None
 
-def parse_bvh(file_path):
+from typing import Optional, Dict, Any
+
+def parse_bvh(file_path: str) -> Optional[Dict[str, Any]]:
     """
     Minimal BVH parser: extracts first frame of motion data.
     """
@@ -128,7 +126,14 @@ def parse_bvh(file_path):
             if i+1 < len(lines):
                 data = lines[i+1].strip().split()
                 joints = [float(x) for x in data if x.replace('.', '', 1).isdigit() or x.replace('.', '', 1).replace('-', '', 1).isdigit()]
-                return {'timestamp': time.time(), 'joints': joints, 'meta': {'source': 'bvh', 'file': file_path}}
+                return {
+                    'timestamp': time.time(),
+                    'joints': joints,
+                    'meta': {
+                        'source': 'bvh',
+                        'file': file_path
+                    }
+                }
     return None
 
 def parse_trc(file_path):
@@ -144,11 +149,18 @@ def parse_trc(file_path):
             return {'timestamp': time.time(), 'joints': joints, 'meta': {'source': 'trc', 'file': file_path}}
     return None
 
-def parse_fbx(file_path):
+def parse_fbx(file_path: str) -> Dict[str, Union[float, List[float], Dict[str, str]]]:
     """
     FBX parser stub: just records file info (real parser needed for production).
     """
-    return {'timestamp': time.time(), 'joints': [], 'meta': {'source': 'fbx', 'file': file_path}}
+    return {
+        'timestamp': float(time.time()),  # float type
+        'joints': [],  # List[float] type (empty list for now)
+        'meta': {  # Dict[str, str] type
+            'source': 'fbx',
+            'file': str(file_path)
+        }
+    }
 
 # --- Test Harness for Local Testing ---
 if __name__ == '__main__':
