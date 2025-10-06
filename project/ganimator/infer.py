@@ -1,13 +1,16 @@
-generator = Generator()
-generator.eval()
 
 # SPADE-GANimator Inference Script
 # Loads the trained model and performs motion blending with skeleton-ID conditioning.
+
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import os
+# Import extraction from motion_extractor
+import sys
+sys.path.append(os.path.dirname(__file__))
+from motion_extractor import extract_glb_joints
 
 # --- SPADE Block (same as in train.py) ---
 class SPADE(nn.Module):
@@ -72,10 +75,24 @@ if __name__ == '__main__':
         print(f"[WARN] Model file {model_path} not found. Using random weights.")
     generator.eval()
 
-    # Example: Blend two random motions with a blend ratio
-    seq1 = torch.randn(1, seq_len, motion_dim)
-    seq2 = torch.randn(1, seq_len, motion_dim)
-    blend_ratio = 0.5  # 0 = all seq1, 1 = all seq2, 0.5 = blend
+    # Use real GLB data from build/build_motions
+    build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../build/build_motions'))
+    file1 = os.path.join(build_dir, 'Air Kicking_mixamo.glb')
+    file2 = os.path.join(build_dir, 'Air Punch_mixamo.glb')
+    arr1 = extract_glb_joints(file1)
+    arr2 = extract_glb_joints(file2)
+    if arr1 is None or arr2 is None:
+        raise RuntimeError('Failed to extract joint data from GLB files.')
+    arr1 = arr1.reshape(-1, arr1.shape[1]*arr1.shape[2])
+    arr2 = arr2.reshape(-1, arr2.shape[1]*arr2.shape[2])
+    arr1 = arr1.repeat(seq_len, axis=0) if arr1.shape[0] < seq_len else arr1[:seq_len]
+    arr2 = arr2.repeat(seq_len, axis=0) if arr2.shape[0] < seq_len else arr2[:seq_len]
+    min_dim = min(arr1.shape[1], arr2.shape[1], motion_dim)
+    arr1 = arr1[:, :min_dim]
+    arr2 = arr2[:, :min_dim]
+    seq1 = torch.tensor(arr1, dtype=torch.float32).unsqueeze(0)  # (1, seq_len, motion_dim)
+    seq2 = torch.tensor(arr2, dtype=torch.float32).unsqueeze(0)
+    blend_ratio = 0.5
     cond = create_skeleton_id_map(1, seq_len, blend_ratio)
 
     with torch.no_grad():

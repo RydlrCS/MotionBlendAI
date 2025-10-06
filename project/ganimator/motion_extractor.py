@@ -31,6 +31,11 @@ from typing import List, Optional
 import shutil
 import difflib
 
+# --- SNN BlendNet Import ---
+import sys
+sys.path.append(os.path.dirname(__file__))
+from snn_blendnet import blend_motion_snn
+
 # --- FBX Extraction ---
 def extract_fbx_joints(file_path: str) -> Optional[np.ndarray]:
     """
@@ -106,12 +111,16 @@ def extract_glb_joints(file_path: str) -> Optional[np.ndarray]:
         import trimesh
         scene = trimesh.load(file_path, force='scene')
         joints = []
-        # Use list(scene.graph.nodes) to iterate node names
+        # Skip root/world nodes, collect all others
         for name in list(scene.graph.nodes):
-            if 'joint' in name.lower():
-                node = scene.graph[name]
-                t = node.transform[:3, 3]  # translation
+            if name.lower() in ("world", "root", "scene"):
+                continue
+            try:
+                matrix = scene.graph.get(name)[0]
+                t = matrix[:3, 3]
                 joints.append(t.tolist())
+            except Exception as e:
+                print(f"[GLB] Node {name} extraction error: {e}")
         arr = np.array(joints)
         return arr.reshape(1, arr.shape[0], 3) if arr.size > 0 else None
     except ImportError:
@@ -238,6 +247,65 @@ if __name__ == "__main__":
             print(f"FBX: {os.path.basename(fbx_path)} | parts: {info['parts']} | shape: {arr.shape}")
         else:
             print(f"FBX: {os.path.basename(fbx_path)} | parts: {info['parts']} | extraction failed")
+
+
+# --- SNN Blend Real Motions CLI ---
+def blend_real_motions_snn(file1, file2, blend_weight=0.5):
+    """
+    Loads two motion files (GLB/TRC), extracts joints, blends using SNNBlendNet, prints result.
+    """
+    arr1 = extract_glb_joints(file1) if file1.lower().endswith('.glb') else extract_trc_joints(file1)
+    arr2 = extract_glb_joints(file2) if file2.lower().endswith('.glb') else extract_trc_joints(file2)
+    if arr1 is None or arr2 is None:
+        print(f"[ERROR] Extraction failed for one or both files: {file1}, {file2}")
+        return
+    # Align shapes if possible (truncate to min joints)
+    if arr1.shape != arr2.shape:
+        print(f"[WARN] Shape mismatch: {arr1.shape} vs {arr2.shape}. Attempting to align by truncating to minimum joint count.")
+        min_frames = min(arr1.shape[0], arr2.shape[0])
+        min_joints = min(arr1.shape[1], arr2.shape[1])
+        min_dim = min(arr1.shape[2], arr2.shape[2])
+        arr1_aligned = arr1[:min_frames, :min_joints, :min_dim]
+        arr2_aligned = arr2[:min_frames, :min_joints, :min_dim]
+        if arr1_aligned.shape != arr2_aligned.shape or arr1_aligned.shape[1] < 3:
+            print(f"[ERROR] Cannot align motions for blending. Aborting.")
+            return
+        arr1, arr2 = arr1_aligned, arr2_aligned
+    blended = blend_motion_snn(arr1[0], arr2[0], blend_weight=blend_weight)
+    print(f"[SNN BLEND] Blended shape: {blended.shape}")
+    print(f"[SNN BLEND] First frame: {blended[0,0]}")
+    # Save blended result as .npy in build/blend_snn
+    out_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../build/blend_snn'))
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    base1 = os.path.splitext(os.path.basename(file1))[0]
+    base2 = os.path.splitext(os.path.basename(file2))[0]
+    out_path = os.path.join(out_dir, f"blend_{base1}_{base2}.npy")
+    np.save(out_path, blended)
+    print(f"[SNN BLEND] Saved blended result to {out_path}")
+
+
+# CLI usage: python motion_extractor.py blend_snn <file1> <file2> [blend_weight]
+if len(sys.argv) > 1 and sys.argv[1] == 'blend_snn':
+    if len(sys.argv) < 4:
+        print("Usage: python motion_extractor.py blend_snn <file1> <file2> [blend_weight]")
+        sys.exit(1)
+    build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../build/build_motions'))
+    def resolve_path(arg):
+        # Use as-is if absolute or contains a directory, else prepend build_dir
+        if os.path.isabs(arg) or os.path.dirname(arg):
+            return os.path.abspath(arg)
+        return os.path.join(build_dir, arg)
+    file1 = resolve_path(sys.argv[2])
+    file2 = resolve_path(sys.argv[3])
+    blend_weight = float(sys.argv[4]) if len(sys.argv) > 4 else 0.5
+    if not os.path.exists(file1):
+        print(f"[ERROR] File not found: {file1}")
+        sys.exit(1)
+    if not os.path.exists(file2):
+        print(f"[ERROR] File not found: {file2}")
+        sys.exit(1)
+    blend_real_motions_snn(file1, file2, blend_weight)
 def extract_trc_joints(file_path: str) -> Optional[np.ndarray]:
     """
     Extracts joint positions from a TRC file (text format).

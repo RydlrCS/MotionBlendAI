@@ -1,14 +1,18 @@
-dataloader = DataLoader(training_sequences, batch_size=2, shuffle=True)
 
 # SPADE-GANimator Training Script
 # Implements a generator with SPADE blocks and skeleton-ID conditioning for motion blending.
 # For hackathon use: code is simplified and well-commented for clarity.
+
 
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 import torch.nn.functional as F
 import os
+# Import extraction from motion_extractor
+import sys
+sys.path.append(os.path.dirname(__file__))
+from motion_extractor import extract_glb_joints
 
 # --- SPADE Block ---
 class SPADE(nn.Module):
@@ -94,11 +98,29 @@ def train():
     num_epochs = 2
     lr = 1e-3
 
-    # Dummy dataset: random motions
-    dataset = [
-        (torch.randn(seq_len, motion_dim), torch.randn(seq_len, motion_dim))
-        for _ in range(20)
-    ]
+
+    # Load two real GLB files from build/build_motions
+    build_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../build/build_motions'))
+    file1 = os.path.join(build_dir, 'Air Kicking_mixamo.glb')
+    file2 = os.path.join(build_dir, 'Air Punch_mixamo.glb')
+    arr1 = extract_glb_joints(file1)
+    arr2 = extract_glb_joints(file2)
+    if arr1 is None or arr2 is None:
+        raise RuntimeError('Failed to extract joint data from GLB files.')
+    # Use only the first frame if needed, or repeat to seq_len
+    # arr1, arr2: (1, joints, 3)
+    # Flatten joints for motion_dim
+    arr1 = arr1.reshape(-1, arr1.shape[1]*arr1.shape[2])  # (1, motion_dim)
+    arr2 = arr2.reshape(-1, arr2.shape[1]*arr2.shape[2])
+    # If not enough frames, repeat
+    arr1 = arr1.repeat(seq_len, axis=0) if arr1.shape[0] < seq_len else arr1[:seq_len]
+    arr2 = arr2.repeat(seq_len, axis=0) if arr2.shape[0] < seq_len else arr2[:seq_len]
+    # Truncate or pad to match motion_dim
+    min_dim = min(arr1.shape[1], arr2.shape[1], motion_dim)
+    arr1 = arr1[:, :min_dim]
+    arr2 = arr2[:, :min_dim]
+    # Build dataset
+    dataset = [(torch.tensor(arr1, dtype=torch.float32), torch.tensor(arr2, dtype=torch.float32)) for _ in range(20)]
     dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
     # Models
