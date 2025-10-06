@@ -1,6 +1,7 @@
 
 # Requirements for Vertex AI pipeline orchestration and Cloud Function
 PyYAML>=5.4.1
-google-cloud-aiplatform[pipelines]
+pyyaml>=5.4.1
+google-cloud-aiplatform==1.43.0
 google-cloud-pubsub
 flask
