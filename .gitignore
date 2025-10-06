@@ -1,3 +1,6 @@
 google-cloud-sdk*
 *.tar.gz
 *.bin
+google-cloud-sdk-456.0.0-darwin-x86_64.tar.gz
+google-cloud-sdk/bin/anthoscli
+google-cloud-sdk/data/cli/gcloud.json
