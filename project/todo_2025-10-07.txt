@@ -1,0 +1,27 @@
+MoCap Motion-Blending Pipeline: TODOs
+Date: 7 October 2025
+
+1. Write orchestration integration test
+   - Create a Python integration test that triggers the Cloud Function (via HTTP or Pub/Sub).
+   - Wait for a response and verify successful Vertex AI pipeline job creation.
+   - Ensure robust error handling and logging.
+
+2. Verify orchestration configuration
+   - Validate all environment variables, GCS paths, and pipeline.yaml references in Cloud Function and pipeline code.
+   - Update documentation if needed.
+
+3. Deep file validation tests
+   - Extend test scripts to perform deeper validation of motion files (.fbx, .glb, .trc, .npy) in seed_motions, build_motions, blend_snn folders.
+   - Check schema/content for compatibility.
+
+4. Update project documentation
+   - Update MoCap Motion-Blending Data Pipeline.docx.txt to reflect new modules, orchestration changes, and test coverage.
+
+5. Codebase cleanup and review
+   - Review and clean up codebase for clarity, modularity, and best practices.
+   - Remove unused code, add comments, and ensure all modules are referenced in documentation.
+
+6. Implement blending and search UI
+   - Build a simple web UI for motion blending and search.
+   - Allow users to select input motions, set blend parameters, and perform search queries.
+   - Integrate UI with backend APIs for blending and search.
