@@ -1,4 +1,7 @@
 import subprocess
+import shutil
+import pytest
+
 
 def test_gsutil_cp_pipeline_yaml():
     """
@@ -6,6 +9,10 @@ def test_gsutil_cp_pipeline_yaml():
     """
     local_path = "/Users/ted/blenderkit_data/MotionBlendAI-1/project/vertex_pipeline/pipeline.yaml"
     gcs_path = "gs://motionblend-ai/pipeline-root/pipeline.yaml"
+    # Skip test if gsutil is not available in the environment
+    if shutil.which("gsutil") is None:
+        pytest.skip("gsutil is not installed in this environment")
+
     # Run gsutil cp command
     result = subprocess.run([
         "gsutil", "cp", local_path, gcs_path
