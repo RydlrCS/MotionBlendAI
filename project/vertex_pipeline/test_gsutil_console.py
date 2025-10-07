@@ -1,6 +1,16 @@
 import subprocess
 import shutil
-import pytest
+import sys
+from typing import Any
+try:
+    import pytest  # type: ignore
+except Exception:
+    class _PytestStub:
+        def skip(self, msg: str) -> None:
+            print("SKIPPED:", msg)
+            sys.exit(0)
+    pytest: Any = _PytestStub()
+    pytest = _PytestStub()
 
 
 def test_gsutil_cp_pipeline_yaml():

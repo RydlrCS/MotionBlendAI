@@ -4,9 +4,9 @@ import os
 # kfp is an optional dev dependency; skip these tests if it's not installed
 try:
     import kfp  # type: ignore
-    KFP_AVAILABLE = True
+    kfp_available = True
 except Exception:
-    KFP_AVAILABLE = False
+    kfp_available = False
 
 class TestVertexPipeline(unittest.TestCase):
     def test_pipeline_yaml_exists(self):
@@ -21,10 +21,17 @@ class TestVertexPipeline(unittest.TestCase):
         """
         Test that the pipeline has the correct input names for GCS and BigQuery paths.
         """
-        if not KFP_AVAILABLE:
+        if not kfp_available:
             self.skipTest("kfp is not installed in this environment")
         from project.vertex_pipeline.pipeline import mocap_ganimator_pipeline
-        input_names = list(mocap_ganimator_pipeline.component_spec.inputs.keys())
+        pipeline_instance = mocap_ganimator_pipeline()
+        from typing import List, Dict, Any
+
+        # Get component_spec in a type-safe way and ensure it has inputs
+        component_spec: Any = getattr(pipeline_instance, "component_spec", None)
+        self.assertIsNotNone(component_spec, "pipeline instance does not have attribute 'component_spec'")
+        inputs: Dict[str, Any] = getattr(component_spec, "inputs", {})
+        input_names: List[str] = list(inputs.keys())
         for required in ['pipeline_mode', 'gcs_data_path', 'bq_project', 'bq_dataset', 'bq_table', 'gcs_model_path']:
             self.assertIn(required, input_names)
 
@@ -32,7 +39,7 @@ class TestVertexPipeline(unittest.TestCase):
         """
         Test that the pipeline includes the expected components.
         """
-        if not KFP_AVAILABLE:
+        if not kfp_available:
             self.skipTest("kfp is not installed in this environment")
         from project.vertex_pipeline.pipeline import download_mocap_data, train_and_upload_model
         self.assertTrue(callable(download_mocap_data))

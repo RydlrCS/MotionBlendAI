@@ -7,11 +7,11 @@ Cloud Function to trigger Vertex AI Pipeline on new MoCap data event (Pub/Sub or
 import os
 import base64
 from google.cloud import aiplatform
-from typing import Dict, Any, Optional, Union, Tuple
+from typing import Dict, Any, Optional, Union, Tuple, cast
 from flask import Request
 
 def trigger_vertex_pipeline(
-    event: Dict[str, Any],
+    event: Union[Dict[str, Any], str],
     context: Optional[Any] = None
 ) -> Union[Dict[str, str], Tuple[Dict[str, str], int]]:
     """
@@ -29,15 +29,24 @@ def trigger_vertex_pipeline(
     try:
         # Decode Pub/Sub message or accept direct dict/string input
         if isinstance(event, dict) and 'data' in event:
-            payload = base64.b64decode(event['data']).decode('utf-8')
+            # Cast to a known union type so static type checkers know the type of data_field
+            data_field = cast(Union[bytes, bytearray, str], event['data'])
+            # Normalize to bytes so type checkers know the argument type for b64decode
+            if isinstance(data_field, (bytes, bytearray)):
+                b64_bytes = bytes(data_field)
+            else:
+                b64_bytes = str(data_field).encode('utf-8')
+            payload = base64.b64decode(b64_bytes).decode('utf-8')
             params = json.loads(payload)
         elif isinstance(event, dict):
             params = event  # direct call for testing
-        elif isinstance(event, str):
-            # Fallback: event is a raw JSON string
-            params = json.loads(event)
         else:
-            raise ValueError("Event must be a dictionary or JSON string.")
+            # Fallback: attempt to coerce event to a JSON string for parsing (handles str, bytes, bytearray)
+            if isinstance(event, (bytes, bytearray)):
+                text = event.decode('utf-8')
+            else:
+                text = str(event)
+            params = json.loads(text)
 
         project = os.environ["PROJECT"]
         location = os.environ.get("LOCATION", "us-central1")

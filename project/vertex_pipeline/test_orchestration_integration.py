@@ -44,7 +44,7 @@ class TestOrchestrationIntegration(unittest.TestCase):
             mock_pipeline_job.assert_called_once()
 
             # Check that PipelineJob was constructed with expected args
-            called_args, called_kwargs = mock_pipeline_job.call_args
+            _, called_kwargs = mock_pipeline_job.call_args
             assert called_kwargs.get('display_name') == 'integration-pipeline'
             assert called_kwargs.get('template_path') == 'pipeline.yaml'
 
