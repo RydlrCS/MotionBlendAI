@@ -13,10 +13,12 @@ WORKDIR /app
 # Copy requirements first for better cache
 COPY project/elastic_search/requirements.txt ./requirements_elastic.txt
 COPY project/ganimator/requirements.txt ./requirements_ganimator.txt
+COPY project/vertex_pipeline/requirements.txt ./requirements_vertex.txt
 
 # Install Python dependencies (heavy ML deps first for cache efficiency)
 RUN pip install --upgrade pip && \
     pip install -r requirements_elastic.txt && \
+    pip install -r requirements_vertex.txt && \
     if [ -s requirements_ganimator.txt ]; then pip install -r requirements_ganimator.txt; fi
 
 # Copy the rest of the code
