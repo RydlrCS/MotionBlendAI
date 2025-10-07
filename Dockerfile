@@ -19,6 +19,7 @@ COPY project/vertex_pipeline/requirements.txt ./requirements_vertex.txt
 RUN pip install --upgrade pip && \
     pip install -r requirements_elastic.txt && \
     pip install -r requirements_vertex.txt && \
+    pip install pytest && \
     if [ -s requirements_ganimator.txt ]; then pip install -r requirements_ganimator.txt; fi
 
 # Copy the rest of the code
