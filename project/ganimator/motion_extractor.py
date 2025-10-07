@@ -306,6 +306,8 @@ if len(sys.argv) > 1 and sys.argv[1] == 'blend_snn':
         print(f"[ERROR] File not found: {file2}")
         sys.exit(1)
     blend_real_motions_snn(file1, file2, blend_weight)
+    # After performing the requested CLI action, exit to avoid running the module demo below.
+    sys.exit(0)
 def extract_trc_joints(file_path: str) -> Optional[np.ndarray]:
     """
     Extracts joint positions from a TRC file (text format).

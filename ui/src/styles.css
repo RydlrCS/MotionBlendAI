@@ -1,0 +1,11 @@
+:root{ --gap: 12px; font-family: system-ui, Arial; }
+.app{ padding:var(--gap); }
+.header{ font-size:1.2rem; font-weight:600; margin-bottom:var(--gap)}
+.content{ display:flex; gap:var(--gap)}
+.left{ width:280px }
+.main{ flex:1 }
+.motion-list ul{ list-style:none; padding:0 }
+.motion-list li{ padding:6px 8px }
+.motion-list li.selected{ background:#eef }
+.blend-controls{ padding:8px; border:1px solid #ddd; border-radius:6px }
+.status{ margin-top:8px; font-size:0.9rem }

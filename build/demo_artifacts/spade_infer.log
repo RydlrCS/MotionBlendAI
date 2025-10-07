@@ -1,0 +1,4 @@
+[INFO] Loaded model from models/ganimator_spade.pth
+Blended motion shape: torch.Size([1, 60, 10])
+Blended motion (first frame): tensor([-0.0317,  0.0833, -0.4060, -0.0454,  0.0617,  0.0770,  0.1364,  0.0398,
+        -0.0409,  0.0387])
