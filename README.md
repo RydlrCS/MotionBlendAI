@@ -123,3 +123,40 @@ curl -X POST -H "Content-Type: application/json" \
 ```
 
 If Docker is not available on your machine, use the GitHub Actions `smoke-tests` workflow which runs Elasticsearch as a service and executes the smoke tests automatically on push to `main`.
+
+## Bootstrapping large artifacts (models / datasets)
+
+Large binary artifacts (model checkpoints, motion datasets, SDK installers) should not be checked into git. Choose one of the following approaches:
+
+- GCS (recommended for GCP projects): upload artifacts to a GCS bucket and fetch them at runtime or in CI.
+
+	Upload example:
+
+	```bash
+	gsutil cp models/ganimator_spade.pth gs://MY_BUCKET/models/ganimator_spade_v1.pth
+	```
+
+	Download in scripts (example `scripts/download_assets.sh`):
+
+	```bash
+	#!/usr/bin/env bash
+	set -e
+	BUCKET=${BUCKET:-gs://my-bucket}
+	DEST=${DEST:-assets}
+	mkdir -p "$DEST"
+	gsutil -m cp "$BUCKET/models/*" "$DEST/"
+	```
+
+- Git LFS (if you want versioned binaries next to source):
+
+	```bash
+	brew install git-lfs
+	git lfs install
+	git lfs track "models/**"
+	git add .gitattributes
+	git commit -m "Track model artifacts with Git LFS"
+	```
+
+	Note: migrating existing large files into LFS rewrites history and requires a force-push. Prefer GCS for large, regularly-updated assets.
+
+If you need help migrating existing blobs from repo history into LFS or uploading assets to a GCS bucket, I can run the migration or upload steps for you.
