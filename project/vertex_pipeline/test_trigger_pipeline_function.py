@@ -7,7 +7,7 @@ import project.vertex_pipeline.trigger_pipeline_function as trigger_mod
 class TestTriggerPipelineFunction(unittest.TestCase):
     @patch('project.vertex_pipeline.trigger_pipeline_function.aiplatform.PipelineJob')
     @patch('project.vertex_pipeline.trigger_pipeline_function.aiplatform.init')
-    def test_trigger_vertex_pipeline(self, mock_init, mock_pipeline_job):
+    def test_trigger_vertex_pipeline(self, mock_init: MagicMock, mock_pipeline_job: MagicMock):
         import base64
         payload = json.dumps({
             'pipeline_mode': 'gcs',
@@ -29,6 +29,8 @@ class TestTriggerPipelineFunction(unittest.TestCase):
             'PIPELINE_YAML': 'pipeline.yaml'
         }):
             result = trigger_mod.trigger_vertex_pipeline(event, context)
+            if isinstance(result, tuple):
+                result = result[0]
             self.assertIn('Triggered Vertex AI pipeline', result['message'])
             mock_init.assert_called_once()
             mock_pipeline_job.assert_called_once()

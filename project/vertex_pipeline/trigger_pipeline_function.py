@@ -7,8 +7,13 @@ Cloud Function to trigger Vertex AI Pipeline on new MoCap data event (Pub/Sub or
 import os
 import base64
 from google.cloud import aiplatform
+from typing import Dict, Any, Optional, Union, Tuple
+from flask import Request
 
-def trigger_vertex_pipeline(event, context=None):
+def trigger_vertex_pipeline(
+    event: Dict[str, Any],
+    context: Optional[Any] = None
+) -> Union[Dict[str, str], Tuple[Dict[str, str], int]]:
     """
     Cloud Function entry point for Pub/Sub trigger.
     Expects event with data: {
@@ -23,12 +28,12 @@ def trigger_vertex_pipeline(event, context=None):
     import json
     try:
         # Decode Pub/Sub message
-        if isinstance(event, dict) and 'data' in event:
+        if 'data' in event:
             payload = base64.b64decode(event['data']).decode('utf-8')
             params = json.loads(payload)
-        elif isinstance(event, dict):
+        else:
             params = event  # direct call for testing
-        elif isinstance(event, str):
+        if isinstance(event, str):
             # Fallback: event is a raw JSON string
             params = json.loads(event)
         else:
@@ -70,9 +75,8 @@ def trigger_vertex_pipeline(event, context=None):
             "trace": traceback.format_exc()
         }, 500
 
-    # ...existing code...
 # HTTP entry point for manual testing (for local or Cloud Functions HTTP trigger)
-def http_trigger(request):
+def http_trigger(request: Request):
     """
     HTTP trigger for manual testing (expects JSON body with pipeline params).
     """

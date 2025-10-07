@@ -1,5 +1,4 @@
 import subprocess
-import os
 
 def test_gsutil_cp_pipeline_yaml():
     """
