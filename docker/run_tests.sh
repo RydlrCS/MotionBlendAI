@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run tests inside container
-pytest -q project/vertex_pipeline/test_trigger_pipeline_function.py -q || exit 1
-pytest -q project/vertex_pipeline/test_gsutil_console.py -q || exit 1
+# Ensure local project dir is importable
+export PYTHONPATH="/app:${PYTHONPATH:-}"
+
+# Run vertex_pipeline tests
+pytest -q project/vertex_pipeline -q
 
 echo "All tests passed"

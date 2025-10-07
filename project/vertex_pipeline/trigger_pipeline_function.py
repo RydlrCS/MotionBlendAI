@@ -27,13 +27,13 @@ def trigger_vertex_pipeline(
     """
     import json
     try:
-        # Decode Pub/Sub message
-        if 'data' in event:
+        # Decode Pub/Sub message or accept direct dict/string input
+        if isinstance(event, dict) and 'data' in event:
             payload = base64.b64decode(event['data']).decode('utf-8')
             params = json.loads(payload)
-        else:
+        elif isinstance(event, dict):
             params = event  # direct call for testing
-        if isinstance(event, str):
+        elif isinstance(event, str):
             # Fallback: event is a raw JSON string
             params = json.loads(event)
         else:
