@@ -1,7 +1,10 @@
-def blend_from_similar(fbx_path, glb_files, trc_files):
+from typing import Optional, Tuple, Literal, List
+import os
+
+def blend_from_similar(fbx_path: str, glb_files: List[str], trc_files: List[str]) -> Tuple[Optional[str], Optional[Literal['GLB', 'TRC']]]:
     """
     If an FBX file is uploaded, find the most similar GLB or TRC file and blend from it.
-    Returns the path to the best match and its type, or None if not found.
+    Returns the path to the best match and its type, or (None, None) if not found.
     """
     import difflib
     fbx_name = os.path.splitext(os.path.basename(fbx_path))[0]
@@ -25,11 +28,9 @@ motion_extractor.py
 Extracts joint data from FBX, BVH, and TRC files for use in motion blending and ML pipelines.
 Uses open-source libraries: 'fbx', 'bvh', and 'numpy'.
 """
-import os
 import numpy as np
 from typing import List, Optional
 import shutil
-import difflib
 
 # --- SNN BlendNet Import ---
 import sys

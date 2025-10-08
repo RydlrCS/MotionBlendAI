@@ -17,6 +17,11 @@ export async function getArtifacts(){
   return res.data
 }
 
+export async function getArtifactsManifest(){
+  const res = await axios.get(`${API_BASE}/api/artifacts/manifest`)
+  return res.data
+}
+
 export async function describeArtifact(name:string){
   const res = await axios.get(`${API_BASE}/api/artifact/${encodeURIComponent(name)}/describe`)
   return res.data

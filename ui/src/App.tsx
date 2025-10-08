@@ -1,27 +1,13 @@
 import React, {useState, useEffect} from 'react'
 import MotionList from './components/MotionList'
 import BlendControls from './components/BlendControls'
-import {getMotions, getArtifacts} from './client'
-
-const ArtifactsList: React.FC<{artifacts: string[]}> = ({artifacts}) => {
-  return (
-    <div className="artifacts-list">
-      {artifacts.length === 0 ? (
-        <div className="empty">No artifacts</div>
-      ) : (
-        <ul>
-          {artifacts.map((a, idx) => (
-            <li key={idx}>{a}</li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
+import ArtifactsList from './components/ArtifactsList'
+import {getMotions, getArtifactsManifest} from './client'
 
 export default function App(){
   const [motions, setMotions] = useState([])
   const [selected, setSelected] = useState<string[]>([])
+  const [view, setView] = useState<'motions'|'artifacts'>('motions')
 
   useEffect(()=>{
     let mounted = true
@@ -31,16 +17,23 @@ export default function App(){
     return ()=>{ mounted=false }
   },[])
 
-  const [artifacts, setArtifacts] = useState<string[]>([])
+  const [manifest, setManifest] = useState<any>(null)
   useEffect(()=>{
     let mounted = true
-    getArtifacts().then(d=>{ if(mounted) setArtifacts(d.artifacts || []) }).catch(()=>{})
+    getArtifactsManifest().then(d=>{
+      if(!mounted) return
+      setManifest(d)
+    }).catch(()=>{})
     return ()=>{ mounted=false }
   },[])
 
   return (
     <div className="app">
       <header className="header">MotionBlend AI - Demo</header>
+      <div style={{padding:8, display:'flex', gap:8}}>
+        <button onClick={()=>setView('motions')} style={{fontWeight: view==='motions'? '600':'400'}}>Motions</button>
+        <button onClick={()=>setView('artifacts')} style={{fontWeight: view==='artifacts'? '600':'400'}}>Artifacts</button>
+      </div>
       <div className="content">
         <aside className="left">
           <MotionList motions={motions} selected={selected} onToggle={(id: string)=>{
@@ -48,8 +41,14 @@ export default function App(){
           }}/>
         </aside>
         <main className="main">
-          <BlendControls selected={selected} />
-          <ArtifactsList artifacts={artifacts} />
+          {view === 'motions' ? (
+            <>
+              <BlendControls selected={selected} />
+              <ArtifactsList manifest={manifest} />
+            </>
+          ) : (
+            <ArtifactsList manifest={manifest} />
+          )}
         </main>
       </div>
     </div>

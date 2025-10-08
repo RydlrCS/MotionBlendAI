@@ -29,7 +29,10 @@ app.get('/api/artifacts', (req, res)=>{
   const fs = require('fs')
   try{
     const files = fs.existsSync(artifactsDir) ? fs.readdirSync(artifactsDir).filter(f=>!f.startsWith('.')) : []
-    res.json({artifacts: files})
+    const stat = (n) => {
+      try{ const s = fs.statSync(path.join(artifactsDir, n)); return {size: s.size} }catch(e){return {size:0}}
+    }
+    res.json({artifacts: files.map(n=>({name:n, size: stat(n).size}))})
   }catch(e){
     res.status(500).json({error: String(e)})
   }
@@ -48,12 +51,21 @@ app.get('/api/artifact/:name/describe', (req, res)=>{
       return res.status(500).json({error: String(err), stderr: stderr.toString()})
     }
     try{
-      const obj = JSON.parse(stdout)
-      res.json(obj)
+  const obj = JSON.parse(stdout)
+  // include file size
+  try{ obj.size = require('fs').statSync(file).size }catch(e){}
+  res.json(obj)
     }catch(e){
       res.status(500).json({error: 'invalid json', raw: stdout, stderr})
     }
   })
+})
+
+app.get('/api/artifacts/manifest', (req,res)=>{
+  const fs = require('fs')
+  const m = path.join(artifactsDir, 'manifest.json')
+  if(!fs.existsSync(m)) return res.status(404).json({error:'no manifest'})
+  try{ res.json(JSON.parse(fs.readFileSync(m,'utf8'))) }catch(e){ res.status(500).json({error:String(e)}) }
 })
 
 const port = process.env.PORT || 3000
