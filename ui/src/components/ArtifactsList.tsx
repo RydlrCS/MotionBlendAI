@@ -2,6 +2,15 @@ import React, {useState} from 'react'
 import {describeArtifact} from '../client'
 import Sparkline from './Sparkline'
 
+// Allow the custom <model-viewer> element in JSX/TSX
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'model-viewer': any
+    }
+  }
+}
+
 export default function ArtifactsList({artifacts, manifest}: any){
   const [desc, setDesc] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(false)

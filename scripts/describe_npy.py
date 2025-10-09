@@ -5,13 +5,14 @@ Usage: describe_npy.py /absolute/path/to/file.npy
 """
 import sys, json
 import numpy as np
+from typing import Any
 
-def describe(path):
+def describe(path: str) -> dict[str, Any]:
     try:
         arr = np.load(path)
     except Exception as e:
         return {"error": str(e)}
-    info = {
+    info: dict[str, Any] = {
         "shape": list(arr.shape),
         "dtype": str(arr.dtype),
     }
