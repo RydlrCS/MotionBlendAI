@@ -1,22 +1,38 @@
 /**
- * Timeline - Professional Frame-Accurate Scrubber Component
+ * Timeline - Professional Frame-Accurate Timeline Component
  * 
- * Provides frame-by-frame navigation with visual feedback, similar to
- * video editing software timelines. Features click-to-seek and drag scrubbing.
+ * Advanced timeline component providing frame-accurate scrubbing, playback controls,
+ * and visual feedback for synchronized motion sequence playback.
  * 
  * Key Features:
- * - Click anywhere on timeline to jump to frame
- * - Drag scrubbing for smooth frame navigation
- * - Visual frame markers with numbering
- * - Current position indicator (scrubber)
- * - Play/pause controls (ready for implementation)
- * - Responsive width adjustment
+ * - Frame-accurate position scrubbing with visual feedback
+ * - Professional play/pause controls with OBS-style design
+ * - Visual progress indicator with hover interactions
+ * - Time-based and frame-based position display
+ * - Responsive design for various viewport sizes
+ * - Integration with synchronized playback system
+ * 
+ * Technical Implementation:
+ * - Mouse-based scrubbing with real-time position updates
+ * - Keyboard shortcuts for common playback operations
+ * - Visual markers for important frames or blend points
+ * - Performance-optimized for smooth scrubbing at 30-120 FPS
  * 
  * OBS-Style Design:
- * - Dark timeline track with frame markers
- * - Bright scrubber indicator for current position
- * - Professional transport controls
- * - Frame-accurate positioning
+ * - Professional dark theme with accent colors
+ * - Industry-standard playback control icons
+ * - Consistent typography and spacing
+ * - Hover effects and smooth transitions
+ * 
+ * Integration Points:
+ * - Synchronized with useSyncedPlayback hook
+ * - Frame updates propagate to dual sequence viewers
+ * - Blend weight synchronization for preview overlay
+ * - Real-time frame position broadcasting
+ * 
+ * Author: MotionBlend AI Team
+ * Version: 1.0.0
+ * Compatible with: All major browsers, Touch devices
  */
 import React from 'react'
 

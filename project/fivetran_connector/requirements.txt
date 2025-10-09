@@ -1,7 +1,14 @@
-# Fivetran connector dependencies for MoCap ingestion
-# Core Google Cloud and API dependencies
+# MotionBlend AI Fivetran Connector Dependencies
+# Note: fivetran_connector_sdk is pre-installed in Fivetran environment
+
+# Motion data processing
+numpy>=1.21.0
+pygltflib>=1.15.0
+
+# Core Google Cloud and API dependencies (for existing GCS integration)
 google-cloud-bigquery==3.17.2
 google-api-core==2.17.1
 requests==2.31.0
+
 # For local development and testing
 pytest==7.4.3

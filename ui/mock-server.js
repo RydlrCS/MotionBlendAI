@@ -2,13 +2,124 @@ const express = require('express')
 const app = express()
 app.use(express.json())
 
+// Mock motion data with frame information for visualization
 const motions = [
-  {id:'m001', name:'walk_fwd', formats:['npy','fbx'], duration:2.5},
-  {id:'m002', name:'run_right', formats:['npy','fbx'], duration:1.6},
-  {id:'m003', name:'jump_up', formats:['npy','fbx'], duration:0.9}
+  {
+    id: 'm001',
+    name: 'walk_fwd',
+    formats: ['npy', 'fbx'],
+    duration: 2.5,
+    shape: [75, 16, 3], // 75 frames, 16 joints, 3D coordinates
+    frames: generateMockFrames(75, 16), // Generate sample frame data
+    jointNames: [
+      'root', 'spine1', 'spine2', 'head',
+      'left_shoulder', 'left_elbow', 'left_wrist',
+      'right_shoulder', 'right_elbow', 'right_wrist',
+      'left_hip', 'left_knee', 'left_ankle',
+      'right_hip', 'right_knee', 'right_ankle'
+    ]
+  },
+  {
+    id: 'm002',
+    name: 'run_right',
+    formats: ['npy', 'fbx'],
+    duration: 1.6,
+    shape: [48, 16, 3], // 48 frames, 16 joints, 3D coordinates
+    frames: generateMockFrames(48, 16),
+    jointNames: [
+      'root', 'spine1', 'spine2', 'head',
+      'left_shoulder', 'left_elbow', 'left_wrist',
+      'right_shoulder', 'right_elbow', 'right_wrist',
+      'left_hip', 'left_knee', 'left_ankle',
+      'right_hip', 'right_knee', 'right_ankle'
+    ]
+  },
+  {
+    id: 'm003',
+    name: 'jump_up',
+    formats: ['npy', 'fbx'],
+    duration: 0.9,
+    shape: [27, 16, 3], // 27 frames, 16 joints, 3D coordinates
+    frames: generateMockFrames(27, 16),
+    jointNames: [
+      'root', 'spine1', 'spine2', 'head',
+      'left_shoulder', 'left_elbow', 'left_wrist',
+      'right_shoulder', 'right_elbow', 'right_wrist',
+      'left_hip', 'left_knee', 'left_ankle',
+      'right_hip', 'right_knee', 'right_ankle'
+    ]
+  }
 ]
 
-app.get('/api/motions', (req,res)=>{
+/**
+ * Generate mock motion capture frame data
+ * Creates realistic-looking joint positions for demonstration
+ * 
+ * @param {number} frameCount - Number of frames to generate
+ * @param {number} jointCount - Number of joints per frame
+ * @returns {Array} Array of frames with joint positions
+ */
+function generateMockFrames(frameCount, jointCount) {
+  const frames = []
+  
+  for (let frame = 0; frame < frameCount; frame++) {
+    const joints = []
+    const time = frame / frameCount * Math.PI * 2 // Animation cycle
+    
+    for (let joint = 0; joint < jointCount; joint++) {
+      // Create realistic motion patterns
+      const baseY = joint < 4 ? 1.0 : 0.5 // Upper body higher than lower
+      const walkCycle = Math.sin(time * 2 + joint) * 0.1
+      const bounce = Math.sin(time * 4) * 0.05
+      
+      joints.push({
+        x: Math.cos(time + joint * 0.1) * 0.3 + Math.sin(time * 3) * 0.1,
+        y: baseY + walkCycle + bounce,
+        z: Math.sin(time * 1.5 + joint * 0.2) * 0.2,
+        name: `joint_${joint}`
+      })
+    }
+    
+    frames.push(joints)
+  }
+  
+  return frames
+}
+
+// GET /api/motions - Return available motion sequences with frame data
+app.get('/api/motions', (req, res) => {
+  const motions = [
+    {
+      id: 'm001',
+      name: 'walk_fwd', 
+      formats: ['npy', 'fbx'],
+      duration: 2.5,
+      shape: [75, 22, 3], // 75 frames, 22 joints, 3D coordinates
+      joints: 22,
+      frames: 75,
+      fps: 30
+    },
+    {
+      id: 'm002',
+      name: 'run_right',
+      formats: ['npy', 'fbx'], 
+      duration: 1.6,
+      shape: [48, 22, 3],
+      joints: 22,
+      frames: 48, 
+      fps: 30
+    },
+    {
+      id: 'm003',
+      name: 'jump_up',
+      formats: ['npy', 'fbx'],
+      duration: 0.9,
+      shape: [27, 22, 3],
+      joints: 22,
+      frames: 27,
+      fps: 30
+    }
+  ]
   res.json({motions})
 })
 

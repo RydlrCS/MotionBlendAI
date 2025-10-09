@@ -1,17 +1,80 @@
-project/
-├── fivetran_connector/
-│   └── PoseStreamConnector.py       # Fivetran SDK connector code
+MotionBlendAI-1/
+├── project/
+│   ├── fivetran_connector/
+│   │   ├── connector.py                # Main enterprise Fivetran connector 
+│   │   ├── PoseStreamConnector.py      # Real-time pose streaming connector
+│   │   ├── debug_connector.py          # Standalone debug/testing connector
+│   │   ├── test_discovery.py          # File discovery validation tests
+│   │   ├── configuration.json         # Connector configuration
+│   │   ├── requirements.txt           # Python dependencies
+│   │   └── README.md                  # Connector documentation
+│   │
+│   ├── ganimator/
+│   │   ├── train.py                   # PyTorch training script for GANimator
+│   │   ├── infer.py                   # PyTorch inference script (generates motions)
+│   │   └── requirements.txt           # Python dependencies
+│   │
+│   ├── elastic_search/
+│   │   ├── app.py                     # Flask API for vector search
+│   │   ├── requirements.txt           # Python deps (Flask, elasticsearch, etc.)
+│   │   └── static/                     
+│   │       └── index.html             # Front-end UI for search
+│   │
+│   ├── vertex_pipeline/
+│   │   ├── pipeline.py                # KFP pipeline definition
+│   │   └── pipeline.yaml              # Compiled pipeline spec for Vertex AI
+│   │
+│   ├── blending/
+│   │   └── ganimator_blender.py       # Motion blending algorithms
+│   │
+│   ├── search_api/
+│   │   └── search_service.py          # Search service implementation
+│   │
+│   ├── seed_motions/                  # Motion capture source files
+│   │   ├── *.fbx                      # Autodesk FBX motion files (32 files)
+│   │   ├── *.glb                      # glTF binary format (13 files)
+│   │   ├── *.trc                      # Motion tracking data (9 files)
+│   │   └── *.npy                      # NumPy arrays (43 files)
+│   │
+│   ├── tests/
+│   │   ├── integration_check.py       # Integration testing
+│   │   ├── test_search_service.py     # Search API tests
+│   │   ├── test_seed_motions.py       # Motion file validation
+│   │   └── run_seed_test.py           # Test runner
+│   │
+│   └── gcs_check.py                   # Google Cloud Storage validation
 │
-├── ganimator/
-│   ├── train.py                    # PyTorch training script for GANimator
-│   └── infer.py                    # PyTorch inference script (generates motions)
+├── ui/                                # React/TypeScript frontend
+│   ├── src/
+│   │   ├── App.tsx                    # Main OBS-style interface
+│   │   └── components/                # React components
+│   │       ├── BlendMixer.tsx         # Motion blending interface
+│   │       ├── MotionList.tsx         # Motion catalog viewer
+│   │       ├── BlendControls.tsx      # Blend parameter controls
+│   │       └── ArtifactsList.tsx      # Generated content viewer
+│   │
+│   ├── package.json                   # Node.js dependencies
+│   ├── vite.config.ts                 # Vite build configuration
+│   ├── index.html                     # HTML entry point
+│   └── mock-server.js                 # Development API server
 │
-├── elastic_search/
-│   ├── app.py                      # Flask API for vector search
-│   ├── requirements.txt            # Python deps (Flask, elasticsearch, etc.)
-│   └── static/                     
-│       └── index.html              # (Optional) Front-end UI (React or plain HTML)
+├── build/                             # Generated artifacts and outputs
+│   ├── blend_snn/                     # SNN blending results
+│   ├── demo_artifacts/                # Demo files and visualizations
+│   └── build_motions/                 # Processed motion files
 │
-└── vertex_pipeline/
-    ├── pipeline.py                 # KFP pipeline definition (as above)
-    └── pipeline.yaml               # Compiled pipeline spec for Vertex AI
+├── scripts/
+│   ├── seed_motions.py                # Motion file processing scripts
+│   └── __pycache__/                   # Python bytecode cache
+│
+├── models/                            # ML models and checkpoints
+│
+├── docker/                            # Container configurations
+│
+├── PoseStreamConnector.py             # Root-level connector (legacy)
+├── README.md                          # Project documentation
+├── README_COMPREHENSIVE.md            # Detailed implementation guide
+├── docker-compose.yml                 # Multi-service orchestration
+├── Dockerfile                         # Container build instructions
+├── LICENSE                            # Project license
+└── file structure.graphql             # This file structure document

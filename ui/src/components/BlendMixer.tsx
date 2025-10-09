@@ -18,6 +18,8 @@
 import React, {useState, useEffect} from 'react'
 import SequenceViewer from './SequenceViewer'
 import {getMotions} from '../client'
+import {useSyncedPlayback} from '../hooks/useSyncedPlayback'
+import BlendPreviewOverlay from './BlendPreviewOverlay'
 
 /**
  * Motion sequence data structure
@@ -57,18 +59,32 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
   const [sequence1, setSequence1] = useState<SequenceData | null>(null) // Selected sequence A
   const [sequence2, setSequence2] = useState<SequenceData | null>(null) // Selected sequence B
   
-  // Timeline and playback state
-  const [currentFrame, setCurrentFrame] = useState(0)                  // Current timeline position (0-based)
+  // Synchronized playback state for dual viewers
+  const syncedPlayback = useSyncedPlayback({
+    primaryFrames: sequence1?.frames || 100,
+    secondaryFrames: sequence2?.frames || 100,
+    fps: 30,
+    loop: false
+  })
   
   // Blend control state
   const [blendWeight, setBlendWeight] = useState(0.5)                  // Blend weight: 0.0=100% seq1, 1.0=100% seq2
   const [showOverlay, setShowOverlay] = useState(false)                // Show/hide blend preview overlay
 
+  // Load available motions from API
   useEffect(() => {
     getMotions().then(data => {
       setMotions(data.motions || [])
     }).catch(() => setMotions([]))
   }, [])
+  
+  // Update synchronized playback when sequences change
+  useEffect(() => {
+    syncedPlayback.updateConfig({
+      primaryFrames: sequence1?.frames || 100,
+      secondaryFrames: sequence2?.frames || 100
+    })
+  }, [sequence1, sequence2, syncedPlayback])
 
   /**
    * Convert raw motion API data to normalized sequence data structure
@@ -111,6 +127,52 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
       onBlendRequest(sequence1, sequence2, blendWeight)
     }
   }
+  
+  /**
+   * Handle blend weight adjustment
+   * Updates the mixing ratio between primary and secondary sequences
+   */
+  const handleBlendWeightChange = (weight: number) => {
+    setBlendWeight(weight)
+    console.log(`Blend weight updated: ${weight.toFixed(2)}`)
+  }
+  
+  /**
+   * Convert sequence data to motion data format for blending
+   * 
+   * @param sequence Sequence data from API
+   * @returns Motion data compatible with blend preview
+   */
+  const generateMotionDataForBlend = (sequence: SequenceData | null) => {
+    if (!sequence) return null
+    
+    // Generate mock motion frames for blending (in production, use real data)
+    const frames = []
+    for (let frame = 0; frame < sequence.frames; frame++) {
+      const joints = []
+      const time = (frame / sequence.frames) * Math.PI * 2
+      
+      for (let joint = 0; joint < sequence.joints; joint++) {
+        const baseY = joint < 4 ? 1.0 + joint * 0.3 : 0.5
+        const animOffset = Math.sin(time + joint * 0.1) * 0.1
+        
+        joints.push({
+          x: Math.sin(time * 0.5 + joint) * 0.3,
+          y: baseY + animOffset,
+          z: Math.cos(time + joint * 0.05) * 0.2,
+          name: `joint_${joint}`
+        })
+      }
+      
+      frames.push(joints)
+    }
+    
+    return {
+      frames,
+      jointNames: Array.from({length: sequence.joints}, (_, i) => `joint_${i}`),
+      fps: 30
+    }
+  }
 
   return (
     <div className="blend-mixer">
@@ -136,7 +198,7 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
             onChange={(e) => {
               const motion = motions.find(m => (m.name || m.id) === e.target.value)
               setSequence1(motion ? createSequenceData(motion) : null)
-              setCurrentFrame(0)
+              syncedPlayback.stop() // Reset to beginning when sequence changes
             }}
           >
             <option value="">Select motion...</option>
@@ -155,7 +217,7 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
             onChange={(e) => {
               const motion = motions.find(m => (m.name || m.id) === e.target.value)
               setSequence2(motion ? createSequenceData(motion) : null)
-              setCurrentFrame(0)
+              syncedPlayback.stop() // Reset to beginning when sequence changes
             }}
           >
             <option value="">Select motion...</option>
@@ -171,29 +233,34 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
       <div className="dual-viewer">
         <SequenceViewer 
           sequence={sequence1}
-          currentFrame={currentFrame}
-          onFrameChange={setCurrentFrame}
-          title="Sequence A"
+          currentFrame={syncedPlayback.primaryFrame}
+          onFrameChange={syncedPlayback.seekTo}
           isActive={true}
+          isPlaying={syncedPlayback.isPlaying}
         />
         
         <SequenceViewer 
           sequence={sequence2}
-          currentFrame={currentFrame}
-          onFrameChange={setCurrentFrame}
-          title="Sequence B"
-          isActive={true}
+          currentFrame={syncedPlayback.secondaryFrame}
+          onFrameChange={syncedPlayback.seekTo}
+          isActive={false}
+          isPlaying={syncedPlayback.isPlaying}
         />
       </div>
 
-      {showOverlay && sequence1 && sequence2 && (
-        <div className="blend-overlay">
-          <h4>Blend Preview (Frame {currentFrame + 1})</h4>
-          <div className="blend-preview">
-            Weight: A({(1-blendWeight).toFixed(2)}) + B({blendWeight.toFixed(2)})
-          </div>
-        </div>
-      )}
+      {/* Blend preview overlay */}
+      <BlendPreviewOverlay
+        primaryMotion={generateMotionDataForBlend(sequence1)}
+        secondaryMotion={generateMotionDataForBlend(sequence2)}
+        primaryFrame={syncedPlayback.primaryFrame}
+        secondaryFrame={syncedPlayback.secondaryFrame}
+        blendWeight={blendWeight}
+        onBlendWeightChange={handleBlendWeightChange}
+        showGhosts={false}
+        showDifferences={false}
+        isVisible={showOverlay && !!sequence1 && !!sequence2}
+        onClose={() => setShowOverlay(false)}
+      />
 
       <div className="blend-controls">
         <div className="weight-control">
