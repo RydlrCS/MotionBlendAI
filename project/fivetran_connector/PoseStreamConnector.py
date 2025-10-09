@@ -2,6 +2,7 @@
 import os
 import time
 import json
+from typing import Dict, Any, List, Optional, Union
 
 # --- PoseStreamConnector for Moverse MoCap Ingestion ---
 # This file implements a Fivetran-compatible connector for ingesting motion-capture data
