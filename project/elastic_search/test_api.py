@@ -5,6 +5,7 @@ Test script for Elasticsearch API endpoints
 
 import requests
 import time
+from typing import Dict, Any, List, Tuple
 
 BASE_URL = "http://localhost:5002"
 
@@ -27,7 +28,7 @@ def test_search():
     print("\n🔍 Testing Vector Search")
     print("=" * 40)
     
-    search_data = {
+    search_data: Dict[str, Any] = {
         "vector": [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
         "size": 3
     }
@@ -53,7 +54,7 @@ def test_text_search():
     print("\n📝 Testing Text Search")
     print("=" * 40)
     
-    search_data = {
+    search_data: Dict[str, Any] = {
         "query": "dance",
         "size": 3
     }
@@ -108,7 +109,7 @@ if __name__ == "__main__":
         ("Mock Data", test_mock_data)
     ]
     
-    results = []
+    results: List[Tuple[str, bool]] = []
     for test_name, test_func in tests:
         success = test_func()
         results.append((test_name, success))

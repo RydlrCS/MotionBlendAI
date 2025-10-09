@@ -4,11 +4,12 @@ MotionBlend AI Elasticsearch API - Quick test version
 """
 
 from flask import Flask, request, jsonify
+from typing import Dict, Any, List
 
 app = Flask(__name__)
 
 # Mock data for testing
-MOCK_MOTIONS = [
+MOCK_MOTIONS: List[Dict[str, Any]] = [
     {
         "id": "motion_001",
         "name": "Walking Forward",
@@ -44,11 +45,10 @@ def health():
 @app.route('/search', methods=['POST'])
 def search():
     data = request.get_json()
-    query_vector = data.get('vector', [])
     size = data.get('size', 10)
     
     # Simple mock search - return all motions with mock scores
-    results = []
+    results: List[Dict[str, Any]] = []
     for i, motion in enumerate(MOCK_MOTIONS[:size]):
         results.append({
             **motion,
@@ -68,7 +68,7 @@ def search_text():
     size = data.get('size', 10)
     
     # Simple text search in mock data
-    results = []
+    results: List[Dict[str, Any]] = []
     for motion in MOCK_MOTIONS:
         if (query in motion['name'].lower() or 
             any(query in tag.lower() for tag in motion['metadata']['tags']) or

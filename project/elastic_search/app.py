@@ -2,6 +2,11 @@ from flask import Flask, request, jsonify
 from typing import Dict, List, Any, Optional
 import numpy as np
 import os
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 try:
     from flask_cors import CORS  # type: ignore
@@ -29,7 +34,7 @@ ES_INDEX_NAME = "motion-blend"
 
 # Connect to Elasticsearch instance (cloud or local)
 es: Optional[Any] = None
-es_available = False
+es_available: bool = False
 
 def create_motion_mappings() -> Dict[str, Any]:
     """Define comprehensive field mappings for motion capture data."""
@@ -600,7 +605,7 @@ def bulk_index_motions():
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint with Elasticsearch status."""
-    health_data = {
+    health_data: Dict[str, Any] = {
         "status": "healthy",
         "elasticsearch_available": es_available,
         "mock_motions_count": len(MOCK_MOTIONS),
