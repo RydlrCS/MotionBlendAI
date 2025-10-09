@@ -1,0 +1,297 @@
+/**
+ * FileControlPanel Styles
+ * Right sidebar panel for file management and search
+ */
+
+.file-control-panel {
+  background: #1a1a1a;
+  border-left: 1px solid #333;
+  width: 300px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #333;
+  background: #252525;
+}
+
+.panel-header h3 {
+  margin: 0;
+  color: #e0e0e0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.search-button {
+  background: #0066cc;
+  border: none;
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+  color: white;
+}
+
+.search-button:hover {
+  background: #0052a3;
+  transform: scale(1.05);
+}
+
+.search-button:active {
+  transform: scale(0.95);
+}
+
+/* File Browser Section */
+.file-browser-section {
+  padding: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.file-browser-section h4 {
+  margin: 0 0 12px 0;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.file-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stat-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stat-label {
+  color: #999;
+  font-size: 12px;
+}
+
+.stat-value {
+  color: #0066cc;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Quick Actions */
+.quick-actions {
+  padding: 16px;
+  border-bottom: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-button {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-button:hover {
+  background: #333;
+  border-color: #0066cc;
+  color: #fff;
+}
+
+/* Selected Files */
+.selected-files {
+  padding: 16px;
+  border-bottom: 1px solid #333;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.selected-files h4 {
+  margin: 0 0 12px 0;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.selected-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.selected-file-item {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.file-name {
+  color: #e0e0e0;
+  font-size: 12px;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-format {
+  background: #0066cc;
+  color: white;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+/* Instructions */
+.panel-instructions {
+  padding: 16px;
+  background: #252525;
+  margin-top: auto;
+}
+
+.panel-instructions h4 {
+  margin: 0 0 8px 0;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.panel-instructions ul {
+  margin: 0;
+  padding-left: 12px;
+  color: #999;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.panel-instructions li {
+  margin-bottom: 4px;
+}
+
+/* Mixer Layout Adjustments */
+.mixer-layout {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.mixer-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.mixer-sidebar {
+  flex-shrink: 0;
+}
+
+/* Drop Zone Enhancements */
+.sequence-drop-zone {
+  position: relative;
+  border: 2px dashed transparent;
+  border-radius: 8px;
+  transition: all 0.2s;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sequence-drop-zone:hover {
+  border-color: #444;
+}
+
+.sequence-drop-zone.drag-over {
+  border-color: #0066cc;
+  background: rgba(0, 102, 204, 0.1);
+}
+
+.drop-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #666;
+  font-size: 14px;
+  text-align: center;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.sequence-drop-zone:hover .drop-hint {
+  color: #999;
+}
+
+.sequence-drop-zone.drag-over .drop-hint {
+  color: #0066cc;
+  font-weight: 600;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1200px) {
+  .file-control-panel {
+    width: 280px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .mixer-layout {
+    flex-direction: column;
+  }
+  
+  .file-control-panel {
+    width: 100%;
+    height: 200px;
+    border-left: none;
+    border-top: 1px solid #333;
+  }
+  
+  .mixer-sidebar {
+    flex-shrink: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .file-control-panel {
+    height: 150px;
+  }
+  
+  .quick-actions {
+    display: none;
+  }
+  
+  .selected-files {
+    display: none;
+  }
+}

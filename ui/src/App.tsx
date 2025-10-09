@@ -10,6 +10,8 @@ import BlendControls from './components/BlendControls'
 import ArtifactsList from './components/ArtifactsList'
 import BlendMixer from './components/BlendMixer'
 import {getMotions, getArtifactsManifest, startBlend} from './client'
+import './styles/ElasticSearch.css'
+import './styles/FileControlPanel.css'
 
 /**
  * Main App component with OBS-style interface
