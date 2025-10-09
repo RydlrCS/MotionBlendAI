@@ -1,3 +1,71 @@
+#!/usr/bin/env python3
+"""
+MotionBlendAI Elasticsearch API Server
+======================================
+
+Comprehensive Flask application providing semantic search capabilities for motion capture data.
+This server integrates with Elasticsearch Cloud to enable AI-powered motion discovery and blending.
+
+Features:
+---------
+• Vector similarity search using dense vectors and k-NN
+• Semantic text search with ELSER model integration
+• Hybrid search combining vector and text similarity
+• Bulk indexing with semantic field enhancement
+• Comprehensive mock data for development and testing
+• Production-ready error handling and fallback mechanisms
+• CORS support for frontend integration
+• Detailed health monitoring and status reporting
+
+API Endpoints:
+--------------
+• GET  /health              - Health check with Elasticsearch status
+• GET  /motions             - List all available mock motions
+• POST /search              - Vector similarity search (k-NN)
+• POST /search/text         - Text-based motion search
+• POST /search/semantic     - Natural language semantic search
+• POST /search/hybrid       - Combined vector + text search
+• POST /index               - Index single motion document
+• POST /index/bulk          - Bulk index multiple motions
+
+Elasticsearch Integration:
+-------------------------
+The application connects to Elasticsearch Cloud using the latest cluster configuration:
+• Cluster: my-elasticsearch-project-bb39cc.es.us-central1.gcp.elastic.cloud
+• Index: motion-blend
+• Features: Semantic text fields, vector search, bulk operations
+• Timeout: 300s for semantic processing with ML models
+
+Mock Data System:
+----------------
+Extensive mock motion database covering various categories:
+• Athletic: Sports, fitness, explosive movements
+• Dance: Hip-hop, contemporary, ballroom styles  
+• Martial Arts: Karate, boxing, traditional forms
+• Everyday: Walking, gestures, professional interactions
+• Wellness: Yoga, meditation, therapeutic movements
+• Performance: Theater, dramatic expressions
+• Complex: Parkour, multi-skill sequences
+
+Data Pipeline Integration:
+-------------------------
+Seamless integration with Fivetran connector for motion capture data ingestion:
+• Automatic semantic field generation from motion characteristics
+• Motion intensity analysis and intelligent categorization
+• Dual indexing to BigQuery and Elasticsearch
+• Support for BVH, FBX, TRC, and GLB motion formats
+
+Development & Production:
+------------------------
+The application automatically detects Elasticsearch availability and falls back
+to enhanced mock search when needed, ensuring consistent development experience.
+
+Author: MotionBlendAI Team
+Version: 2.0.0
+License: MIT
+Documentation: https://github.com/RydlrCS/MotionBlendAI
+"""
+
 from flask import Flask, request, jsonify
 from typing import Dict, List, Any, Optional
 import numpy as np
@@ -214,8 +282,10 @@ def initialize_elasticsearch():
 # Initialize Elasticsearch on startup
 initialize_elasticsearch()
 
-# Mock motion database for development
+# Mock motion database for development - Comprehensive motion capture data
+# This extensive database covers all major motion categories for testing and development
 MOCK_MOTIONS: List[Dict[str, Any]] = [
+    # === LOCOMOTION CATEGORY ===
     {
         "id": "motion_001",
         "name": "Walking Forward",
@@ -226,8 +296,13 @@ MOCK_MOTIONS: List[Dict[str, Any]] = [
             "duration": 4.0,
             "format": "FBX",
             "category": "locomotion",
-            "tags": ["walking", "forward", "basic"]
-        }
+            "tags": ["walking", "forward", "basic", "everyday"]
+        },
+        "description": "Natural forward walking motion with steady pace and normal gait",
+        "motion_type": "locomotion",
+        "quality_score": 0.85,
+        "complexity": 0.3,
+        "created_at": "2025-10-09T10:00:00Z"
     },
     {
         "id": "motion_002", 
@@ -239,11 +314,36 @@ MOCK_MOTIONS: List[Dict[str, Any]] = [
             "duration": 3.0,
             "format": "GLB",
             "category": "locomotion",
-            "tags": ["running", "sprint", "fast"]
-        }
+            "tags": ["running", "sprint", "fast", "athletic"]
+        },
+        "description": "High-speed sprint running with explosive acceleration and dynamic movement",
+        "motion_type": "athletic",
+        "quality_score": 0.92,
+        "complexity": 0.7,
+        "created_at": "2025-10-09T10:05:00Z"
     },
     {
         "id": "motion_003",
+        "name": "Casual Strolling",
+        "vector": [0.15, 0.28, 0.42, 0.55, 0.31, 0.48, 0.62, 0.75],
+        "metadata": {
+            "frames": 150,
+            "joints": 25,
+            "duration": 5.0,
+            "format": "BVH",
+            "category": "locomotion",
+            "tags": ["walking", "casual", "relaxed", "leisure"]
+        },
+        "description": "Relaxed casual walking with leisurely pace and natural arm swing",
+        "motion_type": "locomotion",
+        "quality_score": 0.78,
+        "complexity": 0.25,
+        "created_at": "2025-10-09T10:10:00Z"
+    },
+    
+    # === DANCE CATEGORY ===
+    {
+        "id": "motion_004",
         "name": "Dance Hip Hop",
         "vector": [0.56, 0.12, 0.89, 0.23, 0.78, 0.34, 0.45, 0.67],
         "metadata": {
@@ -252,11 +352,54 @@ MOCK_MOTIONS: List[Dict[str, Any]] = [
             "duration": 6.7,
             "format": "TRC",
             "category": "dance",
-            "tags": ["dance", "hip-hop", "rhythm"]
-        }
+            "tags": ["dance", "hip-hop", "rhythm", "urban", "street"]
+        },
+        "description": "Dynamic hip-hop dance sequence with sharp movements and rhythmic beats",
+        "motion_type": "dance",
+        "quality_score": 0.88,
+        "complexity": 0.75,
+        "created_at": "2025-10-09T10:15:00Z"
     },
     {
-        "id": "motion_004",
+        "id": "motion_005",
+        "name": "Contemporary Dance Flow",
+        "vector": [0.41, 0.63, 0.27, 0.85, 0.52, 0.39, 0.74, 0.68],
+        "metadata": {
+            "frames": 240,
+            "joints": 32,
+            "duration": 8.0,
+            "format": "FBX",
+            "category": "dance",
+            "tags": ["contemporary", "flowing", "graceful", "artistic", "expressive"]
+        },
+        "description": "Flowing contemporary dance with graceful movements and artistic expression",
+        "motion_type": "dance",
+        "quality_score": 0.91,
+        "complexity": 0.8,
+        "created_at": "2025-10-09T10:20:00Z"
+    },
+    {
+        "id": "motion_006",
+        "name": "Ballroom Waltz",
+        "vector": [0.33, 0.66, 0.44, 0.77, 0.29, 0.58, 0.71, 0.82],
+        "metadata": {
+            "frames": 180,
+            "joints": 28,
+            "duration": 6.0,
+            "format": "GLB",
+            "category": "dance",
+            "tags": ["ballroom", "waltz", "elegant", "partner", "classical"]
+        },
+        "description": "Elegant ballroom waltz with refined posture and classical dance technique",
+        "motion_type": "dance",
+        "quality_score": 0.89,
+        "complexity": 0.65,
+        "created_at": "2025-10-09T10:25:00Z"
+    },
+    
+    # === ATHLETIC CATEGORY ===
+    {
+        "id": "motion_007",
         "name": "Jumping High",
         "vector": [0.78, 0.23, 0.45, 0.12, 0.89, 0.56, 0.67, 0.34],
         "metadata": {
@@ -265,11 +408,54 @@ MOCK_MOTIONS: List[Dict[str, Any]] = [
             "duration": 2.0,
             "format": "FBX",
             "category": "athletic",
-            "tags": ["jumping", "vertical", "explosive"]
-        }
+            "tags": ["jumping", "vertical", "explosive", "athletic", "power"]
+        },
+        "description": "Explosive vertical jump with maximum height and athletic power",
+        "motion_type": "athletic",
+        "quality_score": 0.94,
+        "complexity": 0.6,
+        "created_at": "2025-10-09T10:30:00Z"
     },
     {
-        "id": "motion_005",
+        "id": "motion_008",
+        "name": "Basketball Layup",
+        "vector": [0.87, 0.42, 0.65, 0.19, 0.93, 0.51, 0.76, 0.38],
+        "metadata": {
+            "frames": 75,
+            "joints": 27,
+            "duration": 2.5,
+            "format": "GLB",
+            "category": "athletic",
+            "tags": ["basketball", "layup", "sports", "coordination", "skill"]
+        },
+        "description": "Professional basketball layup with precise ball handling and athletic coordination",
+        "motion_type": "athletic",
+        "quality_score": 0.96,
+        "complexity": 0.85,
+        "created_at": "2025-10-09T10:35:00Z"
+    },
+    {
+        "id": "motion_009",
+        "name": "Tennis Serve",
+        "vector": [0.69, 0.31, 0.84, 0.47, 0.72, 0.26, 0.91, 0.53],
+        "metadata": {
+            "frames": 90,
+            "joints": 26,
+            "duration": 3.0,
+            "format": "TRC",
+            "category": "athletic",
+            "tags": ["tennis", "serve", "precision", "technique", "professional"]
+        },
+        "description": "Professional tennis serve with perfect form and explosive power delivery",
+        "motion_type": "athletic",
+        "quality_score": 0.93,
+        "complexity": 0.8,
+        "created_at": "2025-10-09T10:40:00Z"
+    },
+    
+    # === MARTIAL ARTS CATEGORY ===
+    {
+        "id": "motion_010",
         "name": "Boxing Jab",
         "vector": [0.34, 0.67, 0.23, 0.56, 0.12, 0.89, 0.78, 0.45],
         "metadata": {
@@ -278,11 +464,54 @@ MOCK_MOTIONS: List[Dict[str, Any]] = [
             "duration": 1.5,
             "format": "NPY",
             "category": "combat",
-            "tags": ["boxing", "punch", "martial-arts"]
-        }
+            "tags": ["boxing", "punch", "martial-arts", "combat", "technique"]
+        },
+        "description": "Sharp boxing jab with precise form and controlled power delivery",
+        "motion_type": "combat",
+        "quality_score": 0.87,
+        "complexity": 0.55,
+        "created_at": "2025-10-09T10:45:00Z"
     },
     {
-        "id": "motion_006",
+        "id": "motion_011",
+        "name": "Karate Kata Form",
+        "vector": [0.58, 0.73, 0.41, 0.86, 0.29, 0.64, 0.95, 0.37],
+        "metadata": {
+            "frames": 300,
+            "joints": 30,
+            "duration": 10.0,
+            "format": "FBX",
+            "category": "martial-arts",
+            "tags": ["karate", "kata", "traditional", "discipline", "form"]
+        },
+        "description": "Traditional karate kata with precise movements and martial discipline",
+        "motion_type": "combat",
+        "quality_score": 0.95,
+        "complexity": 0.9,
+        "created_at": "2025-10-09T10:50:00Z"
+    },
+    {
+        "id": "motion_012",
+        "name": "Tai Chi Flow",
+        "vector": [0.22, 0.55, 0.38, 0.71, 0.46, 0.83, 0.17, 0.94],
+        "metadata": {
+            "frames": 420,
+            "joints": 28,
+            "duration": 14.0,
+            "format": "BVH",
+            "category": "martial-arts",
+            "tags": ["tai-chi", "meditative", "flowing", "balance", "wellness"]
+        },
+        "description": "Meditative tai chi sequence with flowing movements and internal focus",
+        "motion_type": "wellness",
+        "quality_score": 0.91,
+        "complexity": 0.7,
+        "created_at": "2025-10-09T10:55:00Z"
+    },
+    
+    # === WELLNESS CATEGORY ===
+    {
+        "id": "motion_013",
         "name": "Yoga Pose Flow",
         "vector": [0.45, 0.78, 0.34, 0.67, 0.56, 0.12, 0.23, 0.89],
         "metadata": {
@@ -291,8 +520,145 @@ MOCK_MOTIONS: List[Dict[str, Any]] = [
             "duration": 6.0,
             "format": "GLB",
             "category": "wellness",
-            "tags": ["yoga", "flexibility", "meditation"]
-        }
+            "tags": ["yoga", "flexibility", "meditation", "mindful", "peaceful"]
+        },
+        "description": "Peaceful yoga flow sequence with mindful breathing and flexibility training",
+        "motion_type": "wellness",
+        "quality_score": 0.89,
+        "complexity": 0.5,
+        "created_at": "2025-10-09T11:00:00Z"
+    },
+    {
+        "id": "motion_014",
+        "name": "Stretching Routine",
+        "vector": [0.31, 0.64, 0.48, 0.75, 0.39, 0.82, 0.26, 0.97],
+        "metadata": {
+            "frames": 240,
+            "joints": 26,
+            "duration": 8.0,
+            "format": "TRC",
+            "category": "wellness",
+            "tags": ["stretching", "flexibility", "recovery", "therapeutic", "gentle"]
+        },
+        "description": "Comprehensive stretching routine for flexibility and muscle recovery",
+        "motion_type": "wellness",
+        "quality_score": 0.84,
+        "complexity": 0.4,
+        "created_at": "2025-10-09T11:05:00Z"
+    },
+    
+    # === GESTURE CATEGORY ===
+    {
+        "id": "motion_015",
+        "name": "Professional Handshake",
+        "vector": [0.42, 0.68, 0.35, 0.79, 0.51, 0.24, 0.86, 0.63],
+        "metadata": {
+            "frames": 60,
+            "joints": 22,
+            "duration": 2.0,
+            "format": "FBX",
+            "category": "gesture",
+            "tags": ["handshake", "professional", "business", "greeting", "confident"]
+        },
+        "description": "Confident professional handshake with proper business etiquette",
+        "motion_type": "gesture",
+        "quality_score": 0.82,
+        "complexity": 0.3,
+        "created_at": "2025-10-09T11:10:00Z"
+    },
+    {
+        "id": "motion_016",
+        "name": "Presenting Gesture",
+        "vector": [0.59, 0.36, 0.81, 0.47, 0.73, 0.28, 0.92, 0.54],
+        "metadata": {
+            "frames": 90,
+            "joints": 24,
+            "duration": 3.0,
+            "format": "GLB",
+            "category": "gesture",
+            "tags": ["presenting", "demonstration", "professional", "communication", "expressive"]
+        },
+        "description": "Professional presentation gesture with clear communication and confident posture",
+        "motion_type": "gesture",
+        "quality_score": 0.86,
+        "complexity": 0.45,
+        "created_at": "2025-10-09T11:15:00Z"
+    },
+    
+    # === PERFORMANCE CATEGORY ===
+    {
+        "id": "motion_017",
+        "name": "Theater Dramatic Pose",
+        "vector": [0.76, 0.43, 0.89, 0.32, 0.65, 0.57, 0.94, 0.41],
+        "metadata": {
+            "frames": 120,
+            "joints": 28,
+            "duration": 4.0,
+            "format": "BVH",
+            "category": "performance",
+            "tags": ["theater", "dramatic", "stage", "acting", "expressive"]
+        },
+        "description": "Dramatic theatrical pose with exaggerated expression for stage performance",
+        "motion_type": "gesture",
+        "quality_score": 0.88,
+        "complexity": 0.7,
+        "created_at": "2025-10-09T11:20:00Z"
+    },
+    {
+        "id": "motion_018",
+        "name": "Musical Conducting",
+        "vector": [0.38, 0.91, 0.57, 0.74, 0.25, 0.83, 0.46, 0.69],
+        "metadata": {
+            "frames": 200,
+            "joints": 26,
+            "duration": 6.7,
+            "format": "TRC",
+            "category": "performance",
+            "tags": ["conducting", "musical", "rhythm", "orchestral", "precise"]
+        },
+        "description": "Musical conducting with precise rhythm and expressive arm movements",
+        "motion_type": "gesture",
+        "quality_score": 0.93,
+        "complexity": 0.8,
+        "created_at": "2025-10-09T11:25:00Z"
+    },
+    
+    # === COMPLEX MULTI-SKILL CATEGORY ===
+    {
+        "id": "motion_019",
+        "name": "Parkour Sequence",
+        "vector": [0.94, 0.67, 0.85, 0.52, 0.91, 0.38, 0.76, 0.83],
+        "metadata": {
+            "frames": 360,
+            "joints": 32,
+            "duration": 12.0,
+            "format": "FBX",
+            "category": "athletic",
+            "tags": ["parkour", "obstacles", "vaulting", "climbing", "complex", "fluid"]
+        },
+        "description": "Complex parkour sequence with fluid transitions between multiple obstacles",
+        "motion_type": "athletic",
+        "quality_score": 0.97,
+        "complexity": 0.95,
+        "created_at": "2025-10-09T11:30:00Z"
+    },
+    {
+        "id": "motion_020",
+        "name": "Acrobatic Routine",
+        "vector": [0.88, 0.54, 0.92, 0.37, 0.79, 0.65, 0.96, 0.41],
+        "metadata": {
+            "frames": 300,
+            "joints": 30,
+            "duration": 10.0,
+            "format": "GLB",
+            "category": "athletic",
+            "tags": ["acrobatic", "gymnastics", "flips", "coordination", "spectacular"]
+        },
+        "description": "Spectacular acrobatic routine with flips, spins, and gymnastic coordination",
+        "motion_type": "athletic",
+        "quality_score": 0.95,
+        "complexity": 0.92,
+        "created_at": "2025-10-09T11:35:00Z"
     }
 ]
 
