@@ -78,13 +78,13 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Elasticsearch configuration - Updated cluster with semantic text support
-ES_API_KEY = "bHRLcXlaa0JSaHFSM2NuRk9tYVA6cDdxRWVUeGNScE9GWWRSNGo5VWlLZw=="  # New cluster API key
-ES_CLOUD_URL = "https://my-elasticsearch-project-bb39cc.es.us-central1.gcp.elastic.cloud:443"  # New cluster URL
+_DEFAULT_ES_API_KEY = "bHRLcXlaa0JSaHFSM2NuRk9tYVA6cDdxRWVUeGNScE9GWWRSNGo5VWlLZw=="  # New cluster API key
+_DEFAULT_ES_CLOUD_URL = "https://my-elasticsearch-project-bb39cc.es.us-central1.gcp.elastic.cloud:443"  # New cluster URL
 
 # Try to get from environment variables (fallback)
 import os
-ES_API_KEY = os.getenv('ES_API_KEY', ES_API_KEY)
-ES_CLOUD_URL = os.getenv('ES_CLOUD_URL', ES_CLOUD_URL)
+ES_API_KEY = os.getenv('ES_API_KEY', _DEFAULT_ES_API_KEY)
+ES_CLOUD_URL = os.getenv('ES_CLOUD_URL', _DEFAULT_ES_CLOUD_URL)
 
 try:
     from flask_cors import CORS  # type: ignore
@@ -264,7 +264,7 @@ def initialize_elasticsearch():
                 # Update existing index mappings
                 try:
                     mappings = create_motion_mappings()
-                    response = es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)
+                    es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)
                     print(f"✅ Updated mappings for index '{ES_INDEX_NAME}'")
                 except Exception as mapping_error:
                     print(f"⚠️ Mapping update: {mapping_error}")
@@ -1140,7 +1140,6 @@ def hybrid_search():
         if es_available and es:
             try:
                 # Build hybrid query
-                must_queries = []
                 should_queries = []
                 
                 if query_vector:
