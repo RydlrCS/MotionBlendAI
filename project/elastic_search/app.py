@@ -1,12 +1,22 @@
 from flask import Flask, request, jsonify
 from typing import Dict, List, Any, Optional
 import numpy as np
-import os
 import logging
+
+from project.elastic_search.ES_INDEX_NAME import ES_INDEX_NAME
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Elasticsearch configuration
+ES_API_KEY = None  # Set your Elasticsearch API key here or use environment variable
+ES_CLOUD_URL = None  # Set your Elasticsearch cloud URL here or use environment variable
+
+# Try to get from environment variables
+import os
+ES_API_KEY = os.getenv('ES_API_KEY', ES_API_KEY)
+ES_CLOUD_URL = os.getenv('ES_CLOUD_URL', ES_CLOUD_URL)
 
 try:
     from flask_cors import CORS  # type: ignore
@@ -21,16 +31,12 @@ try:
 except ImportError:
     elasticsearch_available = False
     print("elasticsearch not available")
+    Elasticsearch = None  # type: ignore
 
 app = Flask(__name__)
 if flask_cors_available:
     from flask_cors import CORS  # type: ignore
     CORS(app)  # Enable CORS for all routes
-
-# Elasticsearch configuration
-ES_CLOUD_URL = os.getenv('ES_CLOUD_URL', 'https://my-elasticsearch-project-ba986d.es.us-central1.gcp.elastic.cloud:443')
-ES_API_KEY = os.getenv('ES_API_KEY', 'S21qNXlKa0JEeUlTSnowSHBZRWg6VlVXWTd4Q0JPbDRSMC1KajFLQ2hKZw==')
-ES_INDEX_NAME = "motion-blend"
 
 # Connect to Elasticsearch instance (cloud or local)
 es: Optional[Any] = None
@@ -161,67 +167,75 @@ def initialize_elasticsearch():
     """Initialize Elasticsearch connection and create index with mappings."""
     global es, es_available
     
-    if not elasticsearch_available:
+    if not elasticsearch_available or Elasticsearch is None:
         print("Elasticsearch library not available")
         return
     
     try:
-        # Try cloud connection first
-        if ES_API_KEY and ES_CLOUD_URL:
-            es = Elasticsearch(
-                ES_CLOUD_URL,
-                api_key=ES_API_KEY,
-                verify_certs=True
-            )
-            print(f"Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
-        else:
-            # Fallback to local connection
-            es = Elasticsearch([{"host": "localhost", "port": 9200}])
-            print("Attempting connection to local Elasticsearch")
+        # Connect to the new Elasticsearch cluster
+        es = Elasticsearch(
+            ES_CLOUD_URL,
+            api_key=ES_API_KEY,
+            verify_certs=True
+        )
+        print(f"Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
         
         # Test connection
-        es_available = es.ping()
+        es_available = bool(es.ping()) if es is not None else False
         
-        if es_available:
+        if es_available and es is not None:
             print("✅ Elasticsearch connection successful")
             
-            # Create index with mappings if it doesn't exist
-            if not es.indices.exists(index=ES_INDEX_NAME):
-                mappings = create_motion_mappings()
-                
-                index_config = {
-                    "mappings": mappings,
-                    "settings": {
-                        "number_of_shards": 1,
-                        "number_of_replicas": 0,
-                        "analysis": {
-                            "analyzer": {
-                                "motion_analyzer": {
-                                    "type": "standard",
-                                    "stopwords": "_english_"
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                response = es.indices.create(index=ES_INDEX_NAME, body=index_config)
-                print(f"✅ Created index '{ES_INDEX_NAME}' with mappings")
-                print(f"Response: {response}")
-            else:
-                # Update mappings if index exists
+            # Update index mappings with semantic text support
+            try:
                 mappings = create_motion_mappings()
                 response = es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)
                 print(f"✅ Updated mappings for index '{ES_INDEX_NAME}'")
                 print(f"Mapping response: {response}")
-                
+            except Exception as mapping_error:
+                print(f"⚠️ Mapping update: {mapping_error}")
         else:
             print("❌ Elasticsearch ping failed")
+    
+def initialize_elasticsearch():
+    """Initialize Elasticsearch connection and create index with mappings."""
+    global es, es_available
+    
+    if not elasticsearch_available or Elasticsearch is None:
+        print("Elasticsearch library not available")
+        return
+    
+    try:
+        # Connect to the new Elasticsearch cluster
+        es = Elasticsearch(
+            ES_CLOUD_URL,
+            api_key=ES_API_KEY,
+            verify_certs=True
+        )
+        print(f"Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
+        
+        # Test connection
+        es_available = bool(es.ping()) if es is not None else False
+        
+        if es_available and es is not None:
+            print("✅ Elasticsearch connection successful")
             
+            # Update index mappings with semantic text support
+            try:
+                mappings = create_motion_mappings()
+                response = es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)
+                print(f"✅ Updated mappings for index '{ES_INDEX_NAME}'")
+                print(f"Mapping response: {response}")
+            except Exception as mapping_error:
+                print(f"⚠️ Mapping update: {mapping_error}")
+        else:
+            print("❌ Elasticsearch ping failed")
+    
     except Exception as e:
         print(f"❌ Elasticsearch connection failed: {e}")
         es_available = False
         es = None
+
 
 # Initialize Elasticsearch on startup
 initialize_elasticsearch()
