@@ -646,7 +646,7 @@ def bulk_index():
             # Perform bulk indexing with timeout
             from elasticsearch import helpers
             bulk_response = helpers.bulk(
-                es_client.options(request_timeout=300),
+                es.options(request_timeout=300),
                 bulk_docs,
                 index=ES_INDEX_NAME
             )

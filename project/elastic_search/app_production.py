@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-MotionBlend AI Elasticsearch API - Optimized Version
-Fast startup with lazy Elasticsearch initialization
+MotionBlend AI Elasticsearch API - Production Version
+Clean, lint-free implementation with proper type safety
 """
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import logging
-import json
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
 # Configure logging
@@ -24,11 +23,11 @@ ES_CLOUD_URL = "https://my-elasticsearch-project-ba986d.es.us-central1.gcp.elast
 ES_API_KEY = "S21qNXlKa0JEeUlTSnowSHBZRWg6VlVXWTd4Q0JPbDRSMC1KajFLQ2hKZw=="
 
 # Global variables for lazy initialization
-es_client = None
-es_available = False
+es_client: Optional[Any] = None
+es_available: bool = False
 
-# Mock data for immediate functionality
-MOCK_MOTIONS = [
+# Mock data with proper typing
+MOCK_MOTIONS: List[Dict[str, Any]] = [
     {
         "id": "motion_001",
         "name": "Walking Forward",
@@ -103,7 +102,7 @@ MOCK_MOTIONS = [
     }
 ]
 
-def get_elasticsearch_client():
+def get_elasticsearch_client() -> Tuple[Optional[Any], bool]:
     """Lazy initialization of Elasticsearch client"""
     global es_client, es_available
     
@@ -117,7 +116,7 @@ def get_elasticsearch_client():
         es_client = Elasticsearch(
             ES_CLOUD_URL,
             api_key=ES_API_KEY,
-            request_timeout=10,  # Short timeout for quick response
+            request_timeout=10,
             retry_on_timeout=False
         )
         
@@ -147,8 +146,8 @@ def calculate_similarity(vec1: List[float], vec2: List[float]) -> float:
     return dot_product / (magnitude1 * magnitude2)
 
 @app.route('/health', methods=['GET'])
-def health():
-    """Health check endpoint - always responds quickly"""
+def health() -> Any:
+    """Health check endpoint"""
     client, available = get_elasticsearch_client()
     
     return jsonify({
@@ -161,10 +160,10 @@ def health():
     })
 
 @app.route('/search', methods=['POST'])
-def search():
+def search() -> Any:
     """Vector similarity search"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         query_vector = data.get('vector', [])
         size = data.get('size', 10)
         
@@ -175,7 +174,6 @@ def search():
         
         if available and client:
             try:
-                # Elasticsearch k-NN search
                 search_body = {
                     "size": size,
                     "query": {
@@ -205,7 +203,6 @@ def search():
                 
             except Exception as e:
                 logger.warning(f"Elasticsearch search failed: {e}")
-                # Fall through to mock search
         
         # Mock vector search using cosine similarity
         scored_motions = []
@@ -215,7 +212,6 @@ def search():
             motion_copy['score'] = similarity
             scored_motions.append(motion_copy)
         
-        # Sort by similarity score (descending)
         scored_motions.sort(key=lambda x: x['score'], reverse=True)
         
         return jsonify({
@@ -230,10 +226,10 @@ def search():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/search/text', methods=['POST'])
-def search_text():
+def search_text() -> Any:
     """Text search"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         query = data.get('query', '').lower()
         size = data.get('size', 10)
         
@@ -244,7 +240,6 @@ def search_text():
         
         if available and client:
             try:
-                # Elasticsearch text search
                 search_body = {
                     "size": size,
                     "query": {
@@ -273,27 +268,22 @@ def search_text():
                 
             except Exception as e:
                 logger.warning(f"Elasticsearch text search failed: {e}")
-                # Fall through to mock search
         
         # Mock text search
         results = []
         for motion in MOCK_MOTIONS:
             score = 0
             
-            # Search in name (weight: 3)
             if query in motion['name'].lower():
                 score += 3
             
-            # Search in description (weight: 2)
             if query in motion['description'].lower():
                 score += 2
             
-            # Search in tags (weight: 2)
             for tag in motion['metadata']['tags']:
                 if query in tag.lower():
                     score += 2
             
-            # Search in category (weight: 1)
             if query in motion['metadata']['category'].lower():
                 score += 1
             
@@ -302,7 +292,6 @@ def search_text():
                 motion_copy['score'] = score
                 results.append(motion_copy)
         
-        # Sort by score (descending)
         results.sort(key=lambda x: x['score'], reverse=True)
         
         return jsonify({
@@ -318,10 +307,10 @@ def search_text():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/index/bulk', methods=['POST'])
-def bulk_index():
+def bulk_index() -> Any:
     """Bulk index multiple motions"""
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         documents = data.get('documents', [])
         
         if not documents:
@@ -333,7 +322,6 @@ def bulk_index():
             try:
                 from elasticsearch import helpers
                 
-                # Prepare documents for bulk indexing
                 bulk_docs = []
                 for doc in documents:
                     bulk_docs.append({
@@ -341,7 +329,6 @@ def bulk_index():
                         "_source": doc
                     })
                 
-                # Perform bulk indexing with short timeout
                 bulk_response = helpers.bulk(
                     client.options(request_timeout=30),
                     bulk_docs,
@@ -357,9 +344,7 @@ def bulk_index():
                 
             except Exception as e:
                 logger.warning(f"Elasticsearch bulk indexing failed: {e}")
-                # Fall through to mock response
         
-        # Mock response
         return jsonify({
             "success": True,
             "indexed": len(documents),
@@ -373,12 +358,12 @@ def bulk_index():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/motions', methods=['GET'])
-def get_motions():
-    """Get all available motions (mock data)"""
+def get_motions() -> Any:
+    """Get all available motions"""
     return jsonify(MOCK_MOTIONS)
 
 @app.route('/status', methods=['GET'])
-def status():
+def status() -> Any:
     """Detailed status endpoint"""
     client, available = get_elasticsearch_client()
     
@@ -399,10 +384,9 @@ def status():
     
     if available and client:
         try:
-            # Get index stats
             stats = client.indices.stats(index=ES_INDEX_NAME)
             status_info["elasticsearch"]["document_count"] = stats['indices'][ES_INDEX_NAME]['total']['docs']['count']
-        except:
+        except Exception:
             status_info["elasticsearch"]["document_count"] = "unknown"
     
     return jsonify(status_info)
@@ -411,8 +395,8 @@ if __name__ == '__main__':
     print("🚀 Starting MotionBlend AI Elasticsearch API")
     print("=" * 50)
     print(f"📊 Mock motions loaded: {len(MOCK_MOTIONS)}")
-    print(f"🌐 Server starting on http://127.0.0.1:5003")
+    print("🌐 Server starting on http://127.0.0.1:5005")
     print("⚡ Elasticsearch will be initialized on first request")
     print("✅ Ready for requests!")
     
-    app.run(debug=True, host='127.0.0.1', port=5003)
+    app.run(debug=True, host='127.0.0.1', port=5005)

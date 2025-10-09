@@ -4,10 +4,8 @@ MotionBlend AI Elasticsearch API - Quick test version
 """
 
 from flask import Flask, request, jsonify
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
 
 # Mock data for testing
 MOCK_MOTIONS = [

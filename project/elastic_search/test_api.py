@@ -4,7 +4,6 @@ Test script for Elasticsearch API endpoints
 """
 
 import requests
-import json
 import time
 
 BASE_URL = "http://localhost:5002"
