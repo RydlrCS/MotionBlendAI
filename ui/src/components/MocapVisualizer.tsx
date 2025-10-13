@@ -116,20 +116,39 @@ export default function MocapVisualizer({
   /**
    * Project 3D coordinates to 2D screen space
    * 
-   * Simple orthographic projection with perspective scaling
-   * Maps mocap coordinate system to SVG viewport
+   * Enhanced projection with automatic centering and scaling
+   * Maps mocap coordinate system to SVG viewport with optimal fit
    * 
    * @param joint 3D joint position
+   * @param bounds Motion bounds for centering
    * @returns 2D screen coordinates
    */
-  const project3DTo2D = (joint: Joint) => {
-    // Simple orthographic projection with slight perspective
-    const scale = 100 // Base scale factor
-    const perspective = 1 + (joint.z * 0.001) // Subtle depth scaling
+  const project3DTo2D = (joint: Joint, bounds?: {minX: number, maxX: number, minY: number, maxY: number}) => {
+    // Calculate adaptive scale based on viewport and motion bounds
+    const padding = 40 // Padding from edges
+    let scale = 80 // Base scale factor
+    
+    if (bounds) {
+      const motionWidth = bounds.maxX - bounds.minX
+      const motionHeight = bounds.maxY - bounds.minY
+      const availableWidth = width - (padding * 2)
+      const availableHeight = height - (padding * 2)
+      
+      if (motionWidth > 0 && motionHeight > 0) {
+        scale = Math.min(
+          availableWidth / motionWidth,
+          availableHeight / motionHeight
+        ) * 0.8 // Leave some extra space
+      }
+    }
+    
+    const perspective = 1 + (joint.z * 0.002) // Subtle depth scaling
+    const centerX = bounds ? (bounds.minX + bounds.maxX) / 2 : 0
+    const centerY = bounds ? (bounds.minY + bounds.maxY) / 2 : 1
     
     return {
-      x: (width / 2) + (joint.x * scale * perspective),
-      y: (height / 2) - (joint.y * scale * perspective), // Flip Y axis for screen coords
+      x: (width / 2) + ((joint.x - centerX) * scale * perspective),
+      y: (height / 2) - ((joint.y - centerY) * scale * perspective), // Flip Y axis for screen coords
       scale: perspective
     }
   }
@@ -182,8 +201,25 @@ export default function MocapVisualizer({
     ? currentJoints 
     : generateMockData(currentFrame, 16) // Default to 16 joints for demo
   
-  // Project all joints to screen coordinates
-  const projectedJoints = jointsToRender.map(project3DTo2D)
+  // Calculate motion bounds for optimal centering
+  const motionBounds = useMemo(() => {
+    if (jointsToRender.length === 0) return undefined
+    
+    let minX = Infinity, maxX = -Infinity
+    let minY = Infinity, maxY = -Infinity
+    
+    jointsToRender.forEach(joint => {
+      minX = Math.min(minX, joint.x)
+      maxX = Math.max(maxX, joint.x)
+      minY = Math.min(minY, joint.y)
+      maxY = Math.max(maxY, joint.y)
+    })
+    
+    return { minX, maxX, minY, maxY }
+  }, [jointsToRender])
+  
+  // Project all joints to screen coordinates with proper centering
+  const projectedJoints = jointsToRender.map(joint => project3DTo2D(joint, motionBounds))
   
   // Handle empty data case
   if (!motionData && jointsToRender.length === 0) {

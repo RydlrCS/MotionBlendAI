@@ -305,6 +305,7 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
                 onFrameChange={syncedPlayback.seekTo}
                 isActive={true}
                 isPlaying={syncedPlayback.isPlaying}
+                onPlayToggle={syncedPlayback.togglePlayback}
               />
               {!sequence1 && (
                 <div className="drop-hint">
@@ -324,6 +325,7 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
                 onFrameChange={syncedPlayback.seekTo}
                 isActive={false}
                 isPlaying={syncedPlayback.isPlaying}
+                onPlayToggle={syncedPlayback.togglePlayback}
               />
               {!sequence2 && (
                 <div className="drop-hint">

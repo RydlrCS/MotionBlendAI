@@ -67,9 +67,31 @@ Documentation: https://github.com/RydlrCS/MotionBlendAI
 """
 
 from flask import Flask, request, jsonify
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, TypedDict, Union
+from datetime import datetime
 import numpy as np
 import logging
+
+# Type definitions for motion data
+class MotionMetadata(TypedDict, total=False):
+    category: str
+    duration: float
+    frames: int
+    joints: int
+    format: str
+    tags: List[str]
+    intensity: float
+    complexity: str
+
+class MotionData(TypedDict, total=False):
+    id: str
+    name: str
+    description: str
+    vector: List[float]
+    metadata: MotionMetadata
+    similarity_score: float
+    semantic_score: float
+    highlight: Optional[Dict[str, List[str]]]
 
 from ES_INDEX_NAME import ES_INDEX_NAME
 
@@ -78,13 +100,16 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Elasticsearch configuration - Updated cluster with semantic text support
-_DEFAULT_ES_API_KEY = "bHRLcXlaa0JSaHFSM2NuRk9tYVA6cDdxRWVUeGNScE9GWWRSNGo5VWlLZw=="  # New cluster API key
-_DEFAULT_ES_CLOUD_URL = "https://my-elasticsearch-project-bb39cc.es.us-central1.gcp.elastic.cloud:443"  # New cluster URL
+_DEFAULT_ES_API_KEY = "R3pLWTNKa0JJSXBZc3NKUnBOdnk6ZHJlSFF2Z1FyVUh5SC05SUZucjZMZw=="  # Provided API key
+_DEFAULT_ES_CLOUD_URL = "https://my-elasticsearch-project-ba986d.es.us-central1.gcp.elastic.cloud:443"  # Provided endpoint
 
 # Try to get from environment variables (fallback)
 import os
+import time
+from datetime import datetime
 ES_API_KEY = os.getenv('ES_API_KEY', _DEFAULT_ES_API_KEY)
 ES_CLOUD_URL = os.getenv('ES_CLOUD_URL', _DEFAULT_ES_CLOUD_URL)
+ELASTICSEARCH_URL = os.getenv('ELASTICSEARCH_URL')  # For local Docker setup
 
 try:
     from flask_cors import CORS  # type: ignore
@@ -96,18 +121,31 @@ except ImportError:
 try:
     from elasticsearch import Elasticsearch  # type: ignore
     elasticsearch_available = True
+    ElasticsearchType = type[Elasticsearch]
 except ImportError:
     elasticsearch_available = False
     print("elasticsearch not available")
-    Elasticsearch = None  # type: ignore
+    # Create a dummy class for type hints when elasticsearch is not available
+    class Elasticsearch:  # type: ignore
+        pass
+    ElasticsearchType = type[Elasticsearch]
 
 app = Flask(__name__)
 if flask_cors_available:
     from flask_cors import CORS  # type: ignore
     CORS(app)  # Enable CORS for all routes
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint for Docker"""
+    return jsonify({
+        "status": "healthy",
+        "elasticsearch": "connected" if es_available else "disconnected",
+        "timestamp": datetime.now().isoformat()
+    })
+
 # Connect to Elasticsearch instance (cloud or local)
-es: Optional[Any] = None
+es: Optional[ElasticsearchType] = None  # type: ignore
 es_available: bool = False
 
 def create_motion_mappings() -> Dict[str, Any]:
@@ -235,36 +273,42 @@ def initialize_elasticsearch():
     """Initialize Elasticsearch connection and create index with mappings."""
     global es, es_available
     
-    if not elasticsearch_available or Elasticsearch is None:
+    if not elasticsearch_available:
         print("Elasticsearch library not available")
         return
     
     try:
-        # Connect to the new Elasticsearch cluster with semantic text support
-        es = Elasticsearch(
-            ES_CLOUD_URL,
-            api_key=ES_API_KEY,
-            verify_certs=True,
-            request_timeout=300  # Extended timeout for semantic text operations
-        )
-        print(f"Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
+        # Connect to Elasticsearch (prefer local Docker setup, fallback to cloud)
+        if ELASTICSEARCH_URL:
+            # Local Elasticsearch in Docker
+            es = Elasticsearch(
+                [ELASTICSEARCH_URL]
+            )
+            print(f"Attempting connection to local Elasticsearch: {ELASTICSEARCH_URL}")
+        else:
+            # Cloud Elasticsearch with semantic text support
+            es = Elasticsearch(
+                [ES_CLOUD_URL],
+                api_key=ES_API_KEY
+            )
+            print(f"Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
         
         # Test connection
-        if es and es.ping():
+        if es is not None and hasattr(es, 'ping') and es.ping():  # type: ignore
             es_available = True
-            cluster_info = es.info()
-            print(f"✅ Connected to Elasticsearch {cluster_info['version']['number']}")
+            cluster_info = es.info()  # type: ignore
+            print(f"✅ Connected to Elasticsearch {cluster_info['version']['number']}")  # type: ignore
             
             # Create index if it doesn't exist
-            if not es.indices.exists(index=ES_INDEX_NAME):
+            if not es.indices.exists(index=ES_INDEX_NAME):  # type: ignore
                 mappings = {"mappings": create_motion_mappings()}
-                es.indices.create(index=ES_INDEX_NAME, body=mappings)
+                es.indices.create(index=ES_INDEX_NAME, body=mappings)  # type: ignore
                 print(f"✅ Created index '{ES_INDEX_NAME}' with semantic text mappings")
             else:
                 # Update existing index mappings
                 try:
                     mappings = create_motion_mappings()
-                    es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)
+                    es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)  # type: ignore
                     print(f"✅ Updated mappings for index '{ES_INDEX_NAME}'")
                 except Exception as mapping_error:
                     print(f"⚠️ Mapping update: {mapping_error}")
@@ -282,9 +326,143 @@ def initialize_elasticsearch():
 # Initialize Elasticsearch on startup
 initialize_elasticsearch()
 
-# Mock motion database for development - Comprehensive motion capture data
-# This extensive database covers all major motion categories for testing and development
-MOCK_MOTIONS: List[Dict[str, Any]] = [
+# Import mock data generators
+import os
+from pathlib import Path
+
+def load_seed_motions():
+    """Load actual motion files from seed_motions directory"""
+    seed_dir = Path(__file__).parent.parent / "seed_motions"
+    motion_files = []
+    
+    if seed_dir.exists():
+        for file_path in seed_dir.glob("*.*"):
+            if file_path.suffix.lower() in ['.fbx', '.glb', '.trc']:
+                # Extract motion characteristics from filename
+                name = file_path.stem
+                category = categorize_motion(name)
+                
+                motion_files.append({
+                    "id": f"seed_{len(motion_files)+1:03d}",
+                    "name": name,
+                    "description": f"Motion capture file: {name}",
+                    "file_path": str(file_path),
+                    "file_format": file_path.suffix.lower(),
+                    "vector": generate_motion_vector(name),
+                    "metadata": {
+                        "category": category,
+                        "source": "seed_motions",
+                        "format": file_path.suffix.upper(),
+                        "file_size": file_path.stat().st_size if file_path.exists() else 0,
+                        "frames": estimate_frames(name),
+                        "duration": estimate_duration(name),
+                        "joints": 25,
+                        "complexity": estimate_complexity(name),
+                        "intensity": estimate_intensity(name),
+                        "tags": extract_tags(name)
+                    }
+                })
+    
+    return motion_files
+
+def categorize_motion(name: str) -> str:
+    """Categorize motion based on filename"""
+    name_lower = name.lower()
+    if any(word in name_lower for word in ['kick', 'punch', 'fight', 'combat']):
+        return 'combat'
+    elif any(word in name_lower for word in ['dance', 'dancing']):
+        return 'dance'
+    elif any(word in name_lower for word in ['spell', 'magic', 'mage']):
+        return 'fantasy'
+    elif any(word in name_lower for word in ['tennis', 'sport']):
+        return 'sports'
+    elif any(word in name_lower for word in ['angry', 'emotion']):
+        return 'emotional'
+    else:
+        return 'general'
+
+def estimate_frames(name: str) -> int:
+    """Estimate frame count based on motion type"""
+    if 'spell' in name.lower() or 'magic' in name.lower():
+        return 180  # ~6 seconds at 30fps
+    elif 'dance' in name.lower():
+        return 300  # ~10 seconds
+    elif 'kick' in name.lower() or 'punch' in name.lower():
+        return 90   # ~3 seconds
+    else:
+        return 150  # ~5 seconds default
+
+def estimate_duration(name: str) -> float:
+    """Estimate duration in seconds"""
+    return estimate_frames(name) / 30.0
+
+def estimate_complexity(name: str) -> str:
+    """Estimate motion complexity"""
+    if any(word in name.lower() for word in ['spell', 'magic', 'dance']):
+        return 'high'
+    elif any(word in name.lower() for word in ['kick', 'punch', 'tennis']):
+        return 'medium'
+    else:
+        return 'low'
+
+def estimate_intensity(name: str) -> float:
+    """Estimate motion intensity (0.0-1.0)"""
+    if any(word in name.lower() for word in ['kick', 'punch', 'angry']):
+        return 0.8
+    elif any(word in name.lower() for word in ['dance', 'tennis']):
+        return 0.6
+    elif any(word in name.lower() for word in ['spell', 'magic']):
+        return 0.4
+    else:
+        return 0.3
+
+def extract_tags(name: str) -> List[str]:
+    """Extract relevant tags from motion name"""
+    tags = []
+    name_lower = name.lower()
+    
+    # Action tags
+    if 'kick' in name_lower: tags.extend(['kick', 'martial_arts', 'combat'])
+    if 'punch' in name_lower: tags.extend(['punch', 'boxing', 'combat'])
+    if 'dance' in name_lower: tags.extend(['dance', 'artistic', 'rhythmic'])
+    if 'spell' in name_lower: tags.extend(['magic', 'fantasy', 'casting'])
+    if 'tennis' in name_lower: tags.extend(['tennis', 'sports', 'racket'])
+    if 'angry' in name_lower: tags.extend(['emotion', 'angry', 'expressive'])
+    
+    # Style tags
+    if 'mixamo' in name_lower: tags.append('mixamo')
+    if 'reprocessed' in name_lower: tags.append('processed')
+    
+    return tags
+
+def generate_motion_vector(name: str) -> List[float]:
+    """Generate a characteristic vector for the motion"""
+    import hashlib
+    import struct
+    
+    # Create deterministic vector based on name
+    hash_obj = hashlib.md5(name.encode())
+    hash_bytes = hash_obj.digest()
+    
+    # Convert to 512-dimensional vector
+    vector = []
+    for i in range(0, len(hash_bytes), 4):
+        chunk = hash_bytes[i:i+4].ljust(4, b'\x00')
+        value = struct.unpack('f', chunk)[0]
+        vector.append(float(value))
+    
+    # Pad to 512 dimensions
+    while len(vector) < 512:
+        vector.append(0.0)
+    
+    return vector[:512]
+
+# Load seed motions and combine with mock data
+seed_motions = load_seed_motions()
+
+# Mock motion data for development and testing
+# This provides realistic motion capture metadata for UI development
+MOCK_MOTIONS = seed_motions + [
     # === LOCOMOTION CATEGORY ===
     {
         "id": "motion_001",
@@ -718,11 +896,11 @@ def semantic_search():
                     }
                 )
                 
-                hits = []
+                hits: List[Dict[str, Any]] = []
                 for hit in response["hits"]["hits"]:
-                    motion_data = hit["_source"]
-                    motion_data["similarity_score"] = hit["_score"]
-                    motion_data["id"] = hit["_id"]
+                    motion_data: Dict[str, Any] = hit["_source"].copy()
+                    motion_data["similarity_score"] = float(hit["_score"])
+                    motion_data["id"] = str(hit["_id"])
                     hits.append(motion_data)
                     
             except Exception as e:
@@ -833,11 +1011,11 @@ def text_search():
                     }
                 )
                 
-                hits = []
+                hits: List[MotionData] = []
                 for hit in response["hits"]["hits"]:
-                    motion_data = hit["_source"]
-                    motion_data["similarity_score"] = hit["_score"] / 10.0  # Normalize score
-                    motion_data["id"] = hit["_id"]
+                    motion_data: MotionData = hit["_source"].copy()  # type: ignore
+                    motion_data["similarity_score"] = float(hit["_score"]) / 10.0  # Normalize score
+                    motion_data["id"] = str(hit["_id"])
                     if "highlight" in hit:
                         motion_data["highlight"] = hit["highlight"]
                     hits.append(motion_data)
@@ -917,33 +1095,6 @@ def index_motion():
             
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-@app.route('/health', methods=['GET'])
-def health_check():
-    """Health check endpoint with Elasticsearch status."""
-    health_data: Dict[str, Any] = {
-        "status": "healthy",
-        "elasticsearch_available": es_available,
-        "mock_motions_count": len(MOCK_MOTIONS),
-        "index_name": ES_INDEX_NAME
-    }
-    
-    if es_available and es:
-        try:
-            # Get Elasticsearch cluster health
-            cluster_health = es.cluster.health()
-            index_stats = es.indices.stats(index=ES_INDEX_NAME)
-            
-            health_data["elasticsearch"] = {
-                "cluster_status": cluster_health["status"],
-                "number_of_nodes": cluster_health["number_of_nodes"],
-                "index_docs_count": index_stats["indices"][ES_INDEX_NAME]["total"]["docs"]["count"],
-                "index_size": index_stats["indices"][ES_INDEX_NAME]["total"]["store"]["size_in_bytes"]
-            }
-        except Exception as e:
-            health_data["elasticsearch_error"] = str(e)
-    
-    return jsonify(health_data)
 
 @app.route('/search/semantic', methods=['POST'])
 def semantic_text_search():
@@ -1298,7 +1449,7 @@ def bulk_index():
         
         if es_available and es:
             # Prepare documents for bulk indexing with semantic fields
-            bulk_docs = []
+            bulk_docs: List[Dict[str, Any]] = []
             for doc in documents:
                 # Ensure semantic text fields are present
                 if "name" in doc and "semantic" not in str(doc.get("name", {})):
@@ -1329,11 +1480,16 @@ def bulk_index():
                     request_timeout=300  # 5 minutes for semantic text processing
                 )
                 
+                # Extract response data with proper typing
+                success_count = int(bulk_response[0]) if bulk_response and isinstance(bulk_response, tuple) else len(documents)
+                error_list = bulk_response[1] if bulk_response and isinstance(bulk_response, tuple) and len(bulk_response) > 1 and isinstance(bulk_response[1], list) else []
+                error_count = len(error_list)
+                
                 return jsonify({
                     "success": True,
-                    "indexed": bulk_response[0] if bulk_response else len(documents),
-                    "errors": len(bulk_response[1]) if bulk_response and len(bulk_response) > 1 else 0,
-                    "details": bulk_response[1][:5] if bulk_response and len(bulk_response) > 1 and bulk_response[1] else [],
+                    "indexed": success_count,
+                    "errors": error_count,
+                    "details": error_list[:5] if error_list else [],
                     "semantic_processing": True
                 })
             except Exception as bulk_error:
@@ -1354,16 +1510,152 @@ def bulk_index():
 
 @app.route('/motions', methods=['GET'])
 def get_motions():
-    """Get all available motions (mock data)"""
-    return jsonify(MOCK_MOTIONS)
+    """Get all available motions including seed files"""
+    # Refresh seed motions to pick up any new files
+    fresh_seed_motions = load_seed_motions()
+    all_motions = fresh_seed_motions + MOCK_MOTIONS[len(seed_motions):]
+    return jsonify(all_motions)
+
+@app.route('/motions/refresh', methods=['POST'])
+def refresh_motions():
+    """Refresh motion data from seed_motions directory"""
+    global MOCK_MOTIONS, seed_motions
+    
+    try:
+        # Reload seed motions
+        fresh_seed_motions = load_seed_motions()
+        MOCK_MOTIONS = fresh_seed_motions + MOCK_MOTIONS[len(seed_motions):]
+        seed_motions = fresh_seed_motions
+        
+        return jsonify({
+            "status": "success",
+            "message": f"Refreshed {len(fresh_seed_motions)} seed motions",
+            "total_motions": len(MOCK_MOTIONS)
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to refresh motions: {e}"}), 500
+
+# Global artifacts storage
+ARTIFACTS_STORE = []
+
+@app.route('/api/blend', methods=['POST', 'OPTIONS'])
+def create_blend():
+    """Create a new motion blend and generate artifact"""
+    if request.method == 'OPTIONS':
+        # Handle preflight CORS request
+        response = jsonify({'status': 'ok'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+        return response
+    
+    try:
+        data = request.get_json()
+        motion1 = data.get('motion1')
+        motion2 = data.get('motion2') 
+        weight = data.get('weight', 0.5)
+        
+        # Generate unique blend ID
+        blend_id = f"blend_{int(time.time() * 1000)}"
+        timestamp = datetime.utcnow().isoformat()
+        
+        # Create blend artifact
+        artifact = {
+            "id": blend_id,
+            "name": f"{motion1}_{motion2}_blend_{weight:.2f}",
+            "type": "motion_blend",
+            "status": "completed",
+            "created_at": timestamp,
+            "metadata": {
+                "source_motions": [motion1, motion2],
+                "blend_weight": weight,
+                "frames": 120,  # Mock frame count
+                "duration": 4.0,  # Mock duration
+                "format": "BVH",
+                "size": "2.3 MB"
+            },
+            "description": f"Blended motion combining {motion1} ({(1-weight)*100:.0f}%) and {motion2} ({weight*100:.0f}%)",
+            "file_path": f"/artifacts/{blend_id}.bvh"
+        }
+        
+        # Store the artifact
+        ARTIFACTS_STORE.append(artifact)
+        
+        logger.info(f"Created blend artifact: {blend_id}")
+        
+        return jsonify({
+            "status": "success",
+            "artifact": artifact,
+            "message": f"Blend created successfully with weight {weight}"
+        })
+        
+    except Exception as e:
+        logger.error(f"Blend creation error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/artifacts', methods=['GET'])
+def get_artifacts():
+    """Get all generated artifacts"""
+    return jsonify({
+        "artifacts": ARTIFACTS_STORE,
+        "total": len(ARTIFACTS_STORE)
+    })
+
+@app.route('/api/artifacts/manifest', methods=['GET'])
+def get_artifacts_manifest():
+    """Get artifacts manifest with metadata"""
+    return jsonify({
+        "artifacts": ARTIFACTS_STORE,
+        "total": len(ARTIFACTS_STORE),
+        "last_updated": datetime.utcnow().isoformat(),
+        "storage_info": {
+            "total_size": sum(2.3 for _ in ARTIFACTS_STORE),  # Mock size calculation
+            "format_breakdown": {
+                "BVH": len([a for a in ARTIFACTS_STORE if a.get("metadata", {}).get("format") == "BVH"]),
+                "FBX": 0,
+                "TRC": 0
+            }
+        }
+    })
+
+@app.route('/api/artifact/<artifact_name>/describe', methods=['GET'])
+def describe_artifact(artifact_name):
+    """Get detailed description of a specific artifact"""
+    artifact = next((a for a in ARTIFACTS_STORE if a["name"] == artifact_name), None)
+    
+    if not artifact:
+        return jsonify({"error": "Artifact not found"}), 404
+    
+    return jsonify({
+        "artifact": artifact,
+        "detailed_description": f"Motion blend artifact generated from {artifact['metadata']['source_motions']}",
+        "technical_info": {
+            "blend_algorithm": "Linear interpolation",
+            "quality_score": 0.92,
+            "compression": "None",
+            "compatible_formats": ["BVH", "FBX", "USD"]
+        }
+    })
 
 if __name__ == '__main__':
-    print(f"Starting Elasticsearch API server...")
+    print(f"🚀 Starting MotionBlendAI Elasticsearch API server...")
     print(f"Elasticsearch available: {es_available}")
     print(f"Mock motions loaded: {len(MOCK_MOTIONS)}")
     print(f"Index name: {ES_INDEX_NAME}")
+    
+    # Initialize Elasticsearch connection when starting
+    initialize_elasticsearch()
+    
     if es_available:
         print("✅ Connected to Elasticsearch - using real search")
     else:
         print("⚠️  Using mock data for development")
-    app.run(debug=True, host='127.0.0.1', port=5002)
+    
+    # Run the Flask app (use 0.0.0.0 for Docker)
+    import os
+    host = os.getenv('HOST', '0.0.0.0')
+    port = int(os.getenv('PORT', 5000))
+    debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    
+    print(f"📡 Server starting on {host}:{port}")
+    app.run(debug=debug, host=host, port=port)

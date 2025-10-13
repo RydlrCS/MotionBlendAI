@@ -48,6 +48,8 @@ interface SequenceViewerProps {
   onFrameChange: (frame: number) => void
   /** Whether playback is currently active */
   isPlaying?: boolean
+  /** Callback when play/pause is toggled */
+  onPlayToggle?: () => void
 }
 
 /**
@@ -117,7 +119,8 @@ export default function SequenceViewer({
   isActive, 
   currentFrame, 
   onFrameChange,
-  isPlaying = false
+  isPlaying = false,
+  onPlayToggle
 }: SequenceViewerProps) {
   // Handle empty state - show placeholder with drop zone styling
   if (!sequence) {
@@ -193,6 +196,8 @@ export default function SequenceViewer({
         frames={sequence.frames}
         currentFrame={currentFrame}
         onFrameChange={onFrameChange}
+        isPlaying={isPlaying}
+        onPlayToggle={onPlayToggle}
       />
     </div>
   )

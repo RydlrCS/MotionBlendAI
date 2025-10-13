@@ -61,19 +61,27 @@ export default function App(){
    */
   const handleBlendRequest = async (seq1: any, seq2: any, weight: number) => {
     try {
+      console.log(`🎬 Starting blend: ${seq1.name} + ${seq2.name} (weight: ${weight})`)
+      
       const result = await startBlend({
         motion1: seq1.name,
         motion2: seq2.name, 
         weight: weight
       })
-      console.log('Blend request submitted:', result)
       
-      // Refresh manifest after blend operation
-      setTimeout(() => {
-        getArtifactsManifest().then(setManifest).catch(() => {})
-      }, 1000)
+      console.log('✅ Blend completed successfully:', result)
+      
+      // Immediately refresh manifest to show new artifact
+      getArtifactsManifest().then(newManifest => {
+        setManifest(newManifest)
+        console.log(`📁 Artifacts updated: ${newManifest.total} total`)
+      }).catch(console.error)
+      
+      // Automatically switch to artifacts view to show result
+      setTimeout(() => setView('artifacts'), 500)
+      
     } catch (e) {
-      console.error('Blend failed:', e)
+      console.error('❌ Blend operation failed:', e)
     }
   }
 

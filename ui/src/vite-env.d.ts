@@ -1,8 +1,4 @@
-declare namespace JSX {
-  interface IntrinsicElements {
-    'model-viewer': any
-  }
-}
+/// <reference types="vite/client" />
 
 interface ImportMetaEnv {
   readonly VITE_API_URL: string
@@ -11,5 +7,3 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
-
-export {}

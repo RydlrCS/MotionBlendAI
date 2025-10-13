@@ -60,6 +60,7 @@ interface SyncedPlayback {
   play: () => void
   pause: () => void
   stop: () => void
+  togglePlayback: () => void
   seekTo: (frame: number) => void
   seekToProgress: (progress: number) => void
   
@@ -237,6 +238,17 @@ export function useSyncedPlayback(initialConfig: SyncConfig): SyncedPlayback {
     setConfig(prev => ({...prev, loop: !prev.loop}))
   }, [])
   
+  /**
+   * Toggle play/pause state
+   */
+  const togglePlayback = useCallback(() => {
+    if (playbackState.isPlaying) {
+      pause()
+    } else {
+      play()
+    }
+  }, [playbackState.isPlaying, play, pause])
+  
   // Calculate current synchronized frame positions
   const [primaryFrame, secondaryFrame] = calculateSyncedFrames(playbackState.currentFrame)
   const progress = playbackState.totalFrames > 1 
@@ -263,6 +275,7 @@ export function useSyncedPlayback(initialConfig: SyncConfig): SyncedPlayback {
     play,
     pause,
     stop,
+    togglePlayback,
     seekTo,
     seekToProgress,
     

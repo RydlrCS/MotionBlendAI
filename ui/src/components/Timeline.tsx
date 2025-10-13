@@ -49,6 +49,10 @@ interface TimelineProps {
   onFrameChange: (frame: number) => void
   /** Timeline width in pixels (default: 400) */
   width?: number
+  /** Whether playback is currently active */
+  isPlaying?: boolean
+  /** Callback when play/pause is toggled */
+  onPlayToggle?: () => void
 }
 
 /**
@@ -57,7 +61,7 @@ interface TimelineProps {
  * Provides professional video editor-style timeline scrubbing with
  * click-to-seek and drag-to-scrub functionality.
  */
-export default function Timeline({frames, currentFrame, onFrameChange, width = 400}: TimelineProps) {
+export default function Timeline({frames, currentFrame, onFrameChange, width = 400, isPlaying = false, onPlayToggle}: TimelineProps) {
   /**
    * Handle timeline click events
    * 
@@ -95,15 +99,11 @@ export default function Timeline({frames, currentFrame, onFrameChange, width = 4
       {/* Transport controls - OBS-style playback buttons */}
       <div className="timeline-controls">
         <button 
-          className="play-btn"
-          onClick={() => {
-            // TODO: Implement play/pause functionality
-            // Future: Add auto-advance timer for playback
-            console.log('Play/pause clicked - ready for implementation')
-          }}
-          title="Play/Pause (Space)"
+          className={`play-btn ${isPlaying ? 'playing' : ''}`}
+          onClick={onPlayToggle}
+          title={isPlaying ? "Pause (Space)" : "Play (Space)"}
         >
-          ▶
+          {isPlaying ? '⏸' : '▶'}
         </button>
         {/* Frame counter display - 1-based for user friendliness */}
         <span className="frame-display">{currentFrame + 1} / {frames}</span>
