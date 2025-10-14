@@ -35,6 +35,7 @@ interface SequenceData {
   frames: number        // Total number of animation frames
   joints: number        // Number of skeleton joints
   duration: number      // Sequence duration in seconds
+  category?: string     // Motion category from API metadata
   data: any            // Raw motion data from API
 }
 
@@ -128,12 +129,18 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
    * Convert file data from search results to sequence data
    */
   const createSequenceDataFromFile = (file: any): SequenceData => {
+    const frames = file.metadata?.frames || 100
+    const joints = file.metadata?.joints || 25
+    const duration = file.metadata?.duration || (frames / 30)
+    const category = file.metadata?.category || 'general'
+    
     return {
       name: file.name,
-      shape: [file.metadata?.frames || 100, file.metadata?.joints || 25, 3],
-      frames: file.metadata?.frames || 100,
-      joints: file.metadata?.joints || 25,
-      duration: file.metadata?.duration || 3.33,
+      shape: [frames, joints, 3],
+      frames: frames,
+      joints: joints,
+      duration: duration,
+      category: category,
       data: file
     }
   }
@@ -148,12 +155,19 @@ export default function BlendMixer({onBlendRequest}: BlendMixerProps) {
    * @returns Normalized SequenceData object
    */
   const createSequenceData = (motion: any): SequenceData => {
+    // Extract actual metadata from API response
+    const frames = motion.metadata?.frames || motion.shape?.[0] || 100
+    const joints = motion.metadata?.joints || motion.shape?.[1] || 25
+    const duration = motion.metadata?.duration || (frames / 30)
+    const category = motion.metadata?.category || 'general'
+    
     return {
       name: motion.name || motion.id,                           // Display name
-      shape: motion.shape || [100, 3],                         // [frames, joints, dims] or fallback
-      frames: motion.shape?.[0] || 100,                        // Total animation frames
-      joints: motion.shape?.[1] || 3,                          // Number of skeleton joints
-      duration: (motion.shape?.[0] || 100) / 30,               // Duration at 30fps
+      shape: motion.shape || [frames, joints, 3],              // [frames, joints, dims] or fallback
+      frames: frames,                                           // Total animation frames from metadata
+      joints: joints,                                           // Number of skeleton joints from metadata
+      duration: duration,                                       // Duration from metadata or calculated
+      category: category,                                       // Motion category from API
       data: motion                                              // Keep original data for blending
     }
   }

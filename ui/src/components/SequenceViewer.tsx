@@ -30,6 +30,7 @@ interface SequenceData {
   frames: number        // Total number of animation frames
   joints: number        // Number of skeleton joints/markers
   duration?: number     // Sequence duration in seconds (optional)
+  category?: string     // Motion category (locomotion, dance, combat, etc.)
   data?: any           // Raw motion data for processing
 }
 
@@ -152,13 +153,13 @@ export default function SequenceViewer({
               </span>
             )}
           </div>
-          <div className="sequence-type">Motion Sequence</div>
+          <div className="sequence-type">{sequence.category || 'general'}</div>
         </div>
         <div className="sequence-metadata">
           <span className="joints">{sequence.joints} joints</span>         {/* Number of skeleton joints */}
           <span className="frames">{sequence.frames} frames</span>         {/* Total frame count */}
           {sequence.duration && (
-            <span className="duration">{sequence.duration.toFixed(2)}s</span> /* Sequence duration */
+            <span className="duration">{sequence.duration.toFixed(1)}s</span> /* Sequence duration */
           )}
         </div>
       </div>

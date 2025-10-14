@@ -1,6 +1,7 @@
 import React, {useState} from 'react'
 import {describeArtifact} from '../client'
 import Sparkline from './Sparkline'
+import MotionBlendAnalysis from './MotionBlendAnalysis'
 
 // Allow the custom <model-viewer> element in JSX/TSX
 declare global {
@@ -15,11 +16,17 @@ export default function ArtifactsList({artifacts, manifest}: any){
   const [desc, setDesc] = useState<Record<string, any> | null>(null)
   const [loading, setLoading] = useState(false)
 
-  async function onClick(name:string){
+  async function onClick(item: any){
     setLoading(true)
+    const name = item.name || item.id
     try{
-      const d = await describeArtifact(name)
-      setDesc({name, ...d})
+      // If item already has full artifact data (blend artifact), use it directly
+      if (item.type === 'motion_blend') {
+        setDesc({name, artifact: item})
+      } else {
+        const d = await describeArtifact(name)
+        setDesc({name, ...d})
+      }
     }catch(e:any){
       setDesc({name, error: e?.message || String(e)})
     }finally{ setLoading(false) }
@@ -32,12 +39,8 @@ export default function ArtifactsList({artifacts, manifest}: any){
     return (n/(1024*1024)).toFixed(2) + ' MB'
   }
 
-  const items = manifest ? (
-    [
-      ...Object.entries(manifest.inputs || {}).map(([k,v])=>({name:k,size:v, kind:'input'})),
-      ...(manifest.outputs || []).map((o:any)=>({name:o.name,size:o.size, kind:'output'}))
-    ]
-  ) : (artifacts || [])
+  // Extract artifacts from manifest or use direct artifacts array
+  const items = manifest?.artifacts || artifacts || []
 
   return (
     <div className="artifacts">
@@ -46,11 +49,16 @@ export default function ArtifactsList({artifacts, manifest}: any){
         <div style={{display:'flex', gap:12}}>
           <ul>
             {items.map((a: any)=> (
-              <li key={a.name} style={{marginBottom:8}}>
+              <li key={a.id || a.name} style={{marginBottom:8}}>
                 <div style={{display:'flex', gap:8, alignItems:'center'}}>
-                  <button onClick={()=>onClick(a.name)}>{a.name}</button>
-                  <small style={{color:'#666'}}>{a.kind ? a.kind.toUpperCase() : ''} {a.size ? `· ${humanSize(a.size)}` : ''}</small>
-                  <a style={{marginLeft:8}} href={`/artifacts/${encodeURIComponent(a.name)}`} target="_blank" rel="noopener noreferrer">Download</a>
+                  <button onClick={()=>onClick(a)}>{a.name}</button>
+                  <small style={{color:'#666'}}>
+                    {a.type ? a.type.toUpperCase() : (a.kind ? a.kind.toUpperCase() : '')} 
+                    {a.metadata?.size ? `· ${a.metadata.size}` : (a.size ? `· ${humanSize(a.size)}` : '')}
+                  </small>
+                  {a.file_path && (
+                    <a style={{marginLeft:8}} href={`/artifacts/${encodeURIComponent(a.name)}`} target="_blank" rel="noopener noreferrer">Download</a>
+                  )}
                 </div>
               </li>
             ))}
@@ -65,6 +73,13 @@ export default function ArtifactsList({artifacts, manifest}: any){
                 </div>
                 {desc.error ? <pre>{String(desc.error)}</pre> : (
                   <div>
+                    {/* Motion Blend Analysis - show for blend artifacts */}
+                    {desc.artifact?.type === 'motion_blend' && (
+                      <div style={{marginBottom: 24}}>
+                        <MotionBlendAnalysis artifact={desc.artifact} width={500} height={300} />
+                      </div>
+                    )}
+                    
                     {/* If GLB, show 3D preview */}
                     {desc.name && desc.name.toLowerCase().endsWith('.glb') ? (
                       <div>

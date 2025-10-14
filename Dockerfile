@@ -30,4 +30,4 @@ COPY scripts/ ./scripts/
 EXPOSE 5000
 
 # Entrypoint (adjust if needed)
-CMD ["python", "project/search_api/search_service.py"]
+CMD ["python", "project/elastic_search/app.py"]
