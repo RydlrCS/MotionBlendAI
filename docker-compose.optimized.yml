@@ -1,0 +1,144 @@
+# Optimized Docker Compose for MotionBlendAI pipeline
+# Multi-stage builds, healthchecks, split services
+
+version: '3.8'
+
+services:
+  # Connector service: GCS → BigQuery sync
+  connector:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.connector
+      cache_from:
+        - motionblend/connector:latest
+    image: motionblend/connector:latest
+    environment:
+      - GCP_PROJECT=${GCP_PROJECT}
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa.json
+      - GCS_BUCKET=${GCS_BUCKET:-motionblend-mocap}
+      - BQ_DATASET=${BQ_DATASET:-RAW_DEV}
+    volumes:
+      - ./connector:/app/connector:cached
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/sa.json:ro
+      - connector-state:/app/state
+    command: >
+      python connector/run_once.py
+      --bucket ${GCS_BUCKET:-motionblend-mocap}
+      --prefix mocap/seed/
+      --dataset ${BQ_DATASET:-RAW_DEV}
+      --limit 2
+    restart: "no"
+    networks:
+      - motionblend
+
+  # dbt runner: staging → marts transformations
+  dbt-runner:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dbt
+      cache_from:
+        - motionblend/dbt:latest
+    image: motionblend/dbt:latest
+    environment:
+      - GCP_PROJECT=${GCP_PROJECT}
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa.json
+      - DBT_PROFILES_DIR=/app/dbt_project
+    volumes:
+      - ./dbt_project:/app/dbt_project:cached
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/sa.json:ro
+    command: >
+      dbt run --profiles-dir /app/dbt_project --target dev
+    depends_on:
+      connector:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - motionblend
+
+  # Exporter: BigQuery → Elasticsearch
+  exporter:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.exporter
+      cache_from:
+        - motionblend/exporter:latest
+    image: motionblend/exporter:latest
+    environment:
+      - GCP_PROJECT=${GCP_PROJECT}
+      - GOOGLE_APPLICATION_CREDENTIALS=/secrets/sa.json
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - ELASTICSEARCH_API_KEY=${ELASTICSEARCH_API_KEY}
+      - BQ_DATASET=${BQ_DATASET:-RAW_DEV}
+    volumes:
+      - ./exporter:/app/exporter:cached
+      - ${GOOGLE_APPLICATION_CREDENTIALS}:/secrets/sa.json:ro
+    command: >
+      python exporter/bigquery_to_elastic.py
+      --bq-project ${GCP_PROJECT}
+      --bq-dataset ${BQ_DATASET:-RAW_DEV}
+      --bq-table mart_blend_snn_metrics
+      --es-url ${ELASTICSEARCH_URL}
+      --es-index mb_blends_v1
+    depends_on:
+      dbt-runner:
+        condition: service_completed_successfully
+    restart: "no"
+    networks:
+      - motionblend
+
+  # UI service: React dev server
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile.dev
+      cache_from:
+        - motionblend/ui:latest
+    image: motionblend/ui:latest
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./ui/src:/app/src:cached
+      - ./ui/public:/app/public:cached
+    environment:
+      - VITE_API_URL=http://localhost:5000
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5174"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - motionblend
+
+  # Flask API (minimal, no Elasticsearch in critical path)
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+      cache_from:
+        - motionblend/api:latest
+    image: motionblend/api:latest
+    ports:
+      - "5000:5000"
+    environment:
+      - ELASTICSEARCH_URL=${ELASTICSEARCH_URL}
+      - DEBUG_MODE=true
+      - MAX_MOCK_MOTIONS=5
+    volumes:
+      - ./project/elastic_search:/app:cached
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - motionblend
+
+volumes:
+  connector-state:
+    driver: local
+
+networks:
+  motionblend:
+    driver: bridge

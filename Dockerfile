@@ -20,7 +20,8 @@ RUN pip install --upgrade pip && \
     pip install -r requirements_elastic.txt && \
     pip install -r requirements_vertex.txt && \
     pip install pytest && \
-    if [ -s requirements_ganimator.txt ]; then pip install -r requirements_ganimator.txt; fi
+    if [ -s requirements_ganimator.txt ]; then pip install -r requirements_ganimator.txt; fi && \
+    pip install --upgrade sentence-transformers huggingface_hub
 
 # Copy the rest of the code
 COPY project/ ./project/

@@ -65,8 +65,25 @@ const TRACKED_JOINTS: Joint[] = [
  * 
  * These metrics measure smoothness of the blended motion, particularly at the
  * transition window where discontinuities may occur.
+ * 
+ * @param frames Total number of frames
+ * @param transitionStart Frame where blend transition begins
+ * @param transitionEnd Frame where blend transition ends
+ * @param seed Random seed for consistent but varied motion generation
  */
-function generateBlendData(frames: number = 120, transitionStart: number = 40, transitionEnd: number = 80) {
+function generateBlendData(
+  frames: number = 120, 
+  transitionStart: number = 40, 
+  transitionEnd: number = 80,
+  seed: number = 12345
+) {
+  // Simple seeded random number generator for consistent results
+  let randomSeed = seed
+  const seededRandom = () => {
+    randomSeed = (randomSeed * 9301 + 49297) % 233280
+    return randomSeed / 233280
+  }
+  
   const data: any = {
     frames: frames,
     transitionWindow: { start: transitionStart, end: transitionEnd },
@@ -74,50 +91,77 @@ function generateBlendData(frames: number = 120, transitionStart: number = 40, t
   }
   
   // Generate data for each tracked joint following paper's methodology
-  TRACKED_JOINTS.forEach(joint => {
+  TRACKED_JOINTS.forEach((joint, jointIndex) => {
     // Step 1: Generate 3D joint positions over time
     const positions: Array<{x: number, y: number, z: number}> = []
+    
+    // Use seed to vary motion patterns per blend
+    const jointSeed = seed + jointIndex * 1000
+    const amplitudeVariation = 0.8 + (seededRandom() * 0.4) // 0.8 to 1.2
+    const frequencyVariation = 0.9 + (seededRandom() * 0.2) // 0.9 to 1.1
     
     for (let frame = 0; frame < frames; frame++) {
       const t = frame / frames
       const inTransition = frame >= transitionStart && frame <= transitionEnd
       
-      // Generate joint-specific motion patterns
+      // Generate joint-specific motion patterns with seed-based variation
       let pos = { x: 0, y: 0, z: 0 }
       
       if (joint.name === 'Pelvis') {
-        // Root motion - smooth locomotion
+        // Root motion - smooth locomotion with subtle vertical bounce
         pos = {
-          x: Math.sin(t * Math.PI * 2) * 0.5,
-          y: 1.0 + Math.sin(t * Math.PI * 4) * 0.1,
-          z: t * 2.0 // Forward progression
+          x: Math.sin(t * Math.PI * 2 * frequencyVariation) * 0.3 * amplitudeVariation,
+          y: 1.0 + Math.sin(t * Math.PI * 8 * frequencyVariation) * 0.08 * amplitudeVariation,
+          z: t * 3.0 * amplitudeVariation
         }
-      } else if (joint.name === 'LeftWrist' || joint.name === 'RightWrist') {
-        // Arm swing motion
-        const side = joint.name === 'LeftWrist' ? 1 : -1
+      } else if (joint.name === 'LeftWrist') {
+        // Left arm swing - larger amplitude, asymmetric
         pos = {
-          x: side * 0.5 + Math.sin(t * Math.PI * 4 + side) * 0.3,
-          y: 1.2 + Math.cos(t * Math.PI * 4) * 0.4,
-          z: Math.sin(t * Math.PI * 4) * 0.5
+          x: 0.6 + Math.sin(t * Math.PI * 4 * frequencyVariation) * 0.5 * amplitudeVariation,
+          y: 1.3 + Math.cos(t * Math.PI * 4 * frequencyVariation) * 0.6 * amplitudeVariation,
+          z: Math.sin(t * Math.PI * 3 * frequencyVariation) * 0.7 * amplitudeVariation
         }
-      } else if (joint.name === 'LeftFoot' || joint.name === 'RightFoot') {
-        // Walking gait with ground contact
-        const side = joint.name === 'LeftFoot' ? 0 : Math.PI
+      } else if (joint.name === 'RightWrist') {
+        // Right arm swing - different frequency and amplitude
         pos = {
-          x: (joint.name === 'LeftFoot' ? -0.2 : 0.2),
-          y: Math.max(0, Math.sin(t * Math.PI * 8 + side) * 0.3),
-          z: t * 2.0 + Math.sin(t * Math.PI * 8 + side) * 0.3
+          x: -0.6 + Math.sin(t * Math.PI * 4 * frequencyVariation + Math.PI) * 0.45 * amplitudeVariation,
+          y: 1.25 + Math.cos(t * Math.PI * 3.5 * frequencyVariation) * 0.55 * amplitudeVariation,
+          z: Math.sin(t * Math.PI * 3.5 * frequencyVariation + Math.PI) * 0.65 * amplitudeVariation
+        }
+      } else if (joint.name === 'LeftFoot') {
+        // Left foot - walking gait with ground contact
+        const gaitPhase = t * Math.PI * 6 * frequencyVariation
+        pos = {
+          x: -0.25,
+          y: Math.max(0, Math.sin(gaitPhase) * 0.35 * amplitudeVariation),
+          z: t * 3.0 * amplitudeVariation + Math.sin(gaitPhase) * 0.4 * amplitudeVariation
+        }
+      } else if (joint.name === 'RightFoot') {
+        // Right foot - opposite phase gait
+        const gaitPhase = t * Math.PI * 6 * frequencyVariation + Math.PI
+        pos = {
+          x: 0.25,
+          y: Math.max(0, Math.sin(gaitPhase) * 0.4 * amplitudeVariation),
+          z: t * 3.0 * amplitudeVariation + Math.sin(gaitPhase) * 0.35 * amplitudeVariation
         }
       }
       
-      // Add transition blending effect - simulate two motions merging
+      // Add transition blending effect - simulate smooth interpolation between motions
       if (inTransition) {
         const progress = (frame - transitionStart) / (transitionEnd - transitionStart)
-        // Blend between motion A and motion B with potential discontinuity
-        const blendFactor = progress
-        const discontinuity = Math.sin(progress * Math.PI) * 0.15 // Slight bump at transition
-        pos.x += discontinuity * Math.sin(frame * 0.5)
-        pos.y += discontinuity * Math.cos(frame * 0.3)
+        
+        // Use smooth interpolation (ease-in-out cubic) for natural blending
+        const smoothBlend = progress < 0.5 
+          ? 4 * progress * progress * progress 
+          : 1 - Math.pow(-2 * progress + 2, 3) / 2
+        
+        // Apply minimal adjustment to simulate gradual transition
+        // Good blend quality means smooth, continuous motion with minimal discontinuity
+        const blendOffset = smoothBlend * 0.02 // Very small offset for smooth transition
+        
+        pos.x += blendOffset * Math.cos(t * Math.PI * 2)
+        pos.y += blendOffset * Math.sin(t * Math.PI * 2) * 0.5
+        pos.z += blendOffset * 0.3
       }
       
       positions.push(pos)
@@ -176,13 +220,76 @@ export default function MotionBlendAnalysis({
   
   // Generate or extract blend analysis data
   const blendData = useMemo(() => {
-    // Use artifact metadata if available, otherwise generate mock data
+    // If backend analysis data is available, transform it to our format
+    if (artifact?.analysis) {
+      const analysis = artifact.analysis
+      const joints: any = {}
+      
+      // Transform backend format to component format
+      TRACKED_JOINTS.forEach(joint => {
+        const backendJointName = joint.name === 'Pelvis' ? 'Hips' : joint.name
+        if (analysis.l2_velocity[backendJointName] && analysis.l2_acceleration[backendJointName]) {
+          joints[joint.name] = {
+            velocity: analysis.l2_velocity[backendJointName],
+            acceleration: analysis.l2_acceleration[backendJointName]
+          }
+        }
+      })
+      
+      return {
+        frames: artifact.metadata.frames || analysis.time_points?.length || 120,
+        transitionWindow: analysis.transition_window || {
+          start: Math.floor((artifact.metadata.frames || 120) * 0.33),
+          end: Math.floor((artifact.metadata.frames || 120) * 0.67)
+        },
+        joints: joints
+      }
+    }
+    
+    // Fallback: Use artifact metadata if available, otherwise generate mock data
     const frames = artifact?.metadata?.frames || 120
     const transitionStart = Math.floor(frames * 0.33)
     const transitionEnd = Math.floor(frames * 0.67)
     
-    return generateBlendData(frames, transitionStart, transitionEnd)
+    // Use motion hash as seed for unique but consistent data generation
+    const seed = artifact?.metadata?.motion_hash || 12345
+    
+    return generateBlendData(frames, transitionStart, transitionEnd, seed)
   }, [artifact])
+  
+  // Calculate blend quality based on transition window metrics
+  const blendQuality = useMemo(() => {
+    const { transitionWindow, joints } = blendData
+    let totalTransitionMetric = 0
+    let totalOverallMetric = 0
+    let count = 0
+    
+    TRACKED_JOINTS.forEach(joint => {
+      const velocities = joints[joint.name].velocity
+      const accelerations = joints[joint.name].acceleration
+      
+      // Calculate average in transition window
+      for (let i = transitionWindow.start; i <= transitionWindow.end; i++) {
+        totalTransitionMetric += velocities[i] + accelerations[i]
+        count++
+      }
+      
+      // Calculate overall average
+      velocities.forEach((v: number) => totalOverallMetric += v)
+      accelerations.forEach((a: number) => totalOverallMetric += a)
+    })
+    
+    const avgTransition = totalTransitionMetric / count
+    const avgOverall = totalOverallMetric / (blendData.frames * TRACKED_JOINTS.length * 2)
+    
+    // Good blend: transition metrics should be similar to or lower than overall average
+    const ratio = avgTransition / avgOverall
+    
+    if (ratio < 1.2) return { quality: 'Excellent', color: 'quality-good', score: '95%' }
+    if (ratio < 1.5) return { quality: 'Good', color: 'quality-good', score: '85%' }
+    if (ratio < 2.0) return { quality: 'Fair', color: 'quality-fair', score: '70%' }
+    return { quality: 'Poor', color: 'quality-poor', score: '50%' }
+  }, [blendData])
   
   // Draw velocity graph
   useEffect(() => {
@@ -424,7 +531,9 @@ export default function MotionBlendAnalysis({
         </div>
         <div className="stat-item">
           <span className="stat-label">Blend Quality:</span>
-          <span className="stat-value quality-good">Smooth ✓</span>
+          <span className={`stat-value ${blendQuality.color}`}>
+            {blendQuality.quality} ({blendQuality.score})
+          </span>
         </div>
       </div>
     </div>

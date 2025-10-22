@@ -1,0 +1,162 @@
+/* UnderStripBand.css - Styles for segment timeline visualization */
+
+.under-strip-band {
+  position: relative;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+}
+
+.segment-band {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  transition: opacity 0.2s ease;
+  cursor: help;
+}
+
+.segment-band:hover {
+  opacity: 1 !important;
+  filter: brightness(1.1);
+}
+
+.segment-band span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 9px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
+
+.transition-marker {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background-color: #333;
+  opacity: 0.6;
+  z-index: 10;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.under-strip-band:hover .transition-marker {
+  opacity: 0.9;
+}
+
+.hover-indicator {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  background-color: #0066cc;
+  box-shadow: 0 0 4px rgba(0, 102, 204, 0.8);
+  z-index: 20;
+  pointer-events: none;
+  animation: indicator-pulse 0.2s ease;
+}
+
+@keyframes indicator-pulse {
+  from {
+    opacity: 0;
+    transform: scaleY(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.frame-scale {
+  position: absolute;
+  font-size: 8px;
+  color: #999;
+  font-family: monospace;
+  user-select: none;
+  pointer-events: none;
+}
+
+.frame-scale > div {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.frame-scale > div > div {
+  width: 1px;
+  background-color: #ccc;
+}
+
+.frame-scale span {
+  font-size: 7px;
+  color: #999;
+}
+
+/* Enhanced visibility on hover */
+.under-strip-band:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+/* Accessibility: High contrast mode */
+@media (prefers-contrast: high) {
+  .segment-band {
+    border: 1px solid #000;
+  }
+
+  .transition-marker {
+    width: 3px;
+    background-color: #000;
+    opacity: 1;
+  }
+
+  .hover-indicator {
+    width: 3px;
+    background-color: #00f;
+    box-shadow: 0 0 6px rgba(0, 0, 255, 1);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .segment-band,
+  .transition-marker,
+  .hover-indicator {
+    transition: none;
+    animation: none;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .segment-band span {
+    font-size: 8px;
+  }
+
+  .frame-scale {
+    font-size: 7px;
+  }
+
+  .frame-scale span {
+    font-size: 6px;
+  }
+}
+
+/* Print styles */
+@media print {
+  .hover-indicator {
+    display: none;
+  }
+
+  .segment-band {
+    opacity: 1 !important;
+  }
+}

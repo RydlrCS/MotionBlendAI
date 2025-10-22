@@ -1,0 +1,7 @@
+# Exporter dependencies
+elasticsearch>=8.0.0
+google-cloud-bigquery>=3.0.0
+
+# Reuse connector dependencies
+structlog>=23.0.0
+tenacity>=8.0.0

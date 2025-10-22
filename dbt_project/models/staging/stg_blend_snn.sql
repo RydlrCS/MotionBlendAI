@@ -1,0 +1,21 @@
+-- models/staging/stg_blend_snn.sql
+-- Staging layer for blend_snn (Smooth Neural Network blends)
+
+WITH source AS (
+    SELECT * FROM {{ source('raw', 'blend_snn') }}
+),
+
+renamed AS (
+    SELECT
+        id AS blend_id,
+        left_motion_id,
+        right_motion_id,
+        blend_ratio,
+        transition_start_frame,
+        transition_end_frame,
+        created_at,
+        updated_at
+    FROM source
+)
+
+SELECT * FROM renamed

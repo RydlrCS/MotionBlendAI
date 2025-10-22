@@ -1,0 +1,291 @@
+[0m14:41:42.997834 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105d6b3e0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106b8c500>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106b8c1a0>]}
+
+
+============================== 14:41:43.005707 | 0affd723-e65c-47e6-99ca-e96924c7f093 ==============================
+[0m14:41:43.005707 [info ] [MainThread]: Running with dbt=1.11.0-b3
+[0m14:41:43.006489 [debug] [MainThread]: running dbt with arguments {'introspect': 'True', 'printer_width': '80', 'debug': 'False', 'use_colors': 'True', 'log_format': 'default', 'target_path': 'None', 'empty': 'None', 'invocation_command': 'dbt debug --profiles-dir /Users/ted/.dbt', 'no_print': 'None', 'profiles_dir': '/Users/ted/.dbt', 'log_path': '/Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/logs', 'log_cache_events': 'False', 'use_experimental_parser': 'False', 'static_parser': 'True', 'warn_error': 'None', 'partial_parse': 'True', 'send_anonymous_usage_stats': 'True', 'write_json': 'True', 'fail_fast': 'False', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'quiet': 'False', 'version_check': 'True', 'cache_selected_only': 'False', 'indirect_selection': 'eager'}
+[0m14:41:43.043785 [info ] [MainThread]: dbt version: 1.11.0-b3
+[0m14:41:43.044290 [info ] [MainThread]: python version: 3.12.8
+[0m14:41:43.044738 [info ] [MainThread]: python path: /Users/ted/blenderkit_data/MotionBlendAI-1/.venv/bin/python3.12
+[0m14:41:43.045684 [info ] [MainThread]: os info: macOS-13.7.8-x86_64-i386-64bit
+[0m14:41:49.829667 [info ] [MainThread]: Using profiles dir at /Users/ted/.dbt
+[0m14:41:49.830534 [info ] [MainThread]: Using profiles.yml file at /Users/ted/.dbt/profiles.yml
+[0m14:41:49.831053 [info ] [MainThread]: Using dbt_project.yml file at /Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/dbt_project.yml
+[0m14:41:49.831676 [info ] [MainThread]: adapter type: bigquery
+[0m14:41:49.832366 [info ] [MainThread]: adapter version: 1.10.2
+[0m14:41:49.997595 [info ] [MainThread]: Configuration:
+[0m14:41:49.998324 [info ] [MainThread]:   profiles.yml file [[32mOK found and valid[0m]
+[0m14:41:49.999068 [info ] [MainThread]:   dbt_project.yml file [[32mOK found and valid[0m]
+[0m14:41:49.999616 [info ] [MainThread]: Required dependencies:
+[0m14:41:50.000152 [debug] [MainThread]: Executing "git --help"
+[0m14:41:50.031467 [debug] [MainThread]: STDOUT: "b"usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]\n           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]\n           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--bare]\n           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]\n           [--super-prefix=<path>] [--config-env=<name>=<envvar>]\n           <command> [<args>]\n\nThese are common Git commands used in various situations:\n\nstart a working area (see also: git help tutorial)\n   clone     Clone a repository into a new directory\n   init      Create an empty Git repository or reinitialize an existing one\n\nwork on the current change (see also: git help everyday)\n   add       Add file contents to the index\n   mv        Move or rename a file, a directory, or a symlink\n   restore   Restore working tree files\n   rm        Remove files from the working tree and from the index\n\nexamine the history and state (see also: git help revisions)\n   bisect    Use binary search to find the commit that introduced a bug\n   diff      Show changes between commits, commit and working tree, etc\n   grep      Print lines matching a pattern\n   log       Show commit logs\n   show      Show various types of objects\n   status    Show the working tree status\n\ngrow, mark and tweak your common history\n   branch    List, create, or delete branches\n   commit    Record changes to the repository\n   merge     Join two or more development histories together\n   rebase    Reapply commits on top of another base tip\n   reset     Reset current HEAD to the specified state\n   switch    Switch branches\n   tag       Create, list, delete or verify a tag object signed with GPG\n\ncollaborate (see also: git help workflows)\n   fetch     Download objects and refs from another repository\n   pull      Fetch from and integrate with another repository or a local branch\n   push      Update remote refs along with associated objects\n\n'git help -a' and 'git help -g' list available subcommands and some\nconcept guides. See 'git help <command>' or 'git help <concept>'\nto read about a specific subcommand or concept.\nSee 'git help git' for an overview of the system.\n""
+[0m14:41:50.033285 [debug] [MainThread]: STDERR: "b''"
+[0m14:41:50.033847 [info ] [MainThread]:  - git [[32mOK found[0m]
+
+[0m14:41:50.034396 [info ] [MainThread]: Connection:
+[0m14:41:50.034987 [info ] [MainThread]:   method: oauth
+[0m14:41:50.035397 [info ] [MainThread]:   database: motionblend-ai
+[0m14:41:50.035791 [info ] [MainThread]:   execution_project: motionblend-ai
+[0m14:41:50.036175 [info ] [MainThread]:   schema: RAW_DEV
+[0m14:41:50.036554 [info ] [MainThread]:   location: US
+[0m14:41:50.036934 [info ] [MainThread]:   priority: interactive
+[0m14:41:50.037322 [info ] [MainThread]:   maximum_bytes_billed: None
+[0m14:41:50.037705 [info ] [MainThread]:   impersonate_service_account: None
+[0m14:41:50.038087 [info ] [MainThread]:   job_retry_deadline_seconds: None
+[0m14:41:50.038463 [info ] [MainThread]:   job_retries: 1
+[0m14:41:50.038884 [info ] [MainThread]:   job_creation_timeout_seconds: None
+[0m14:41:50.041180 [info ] [MainThread]:   job_execution_timeout_seconds: 300
+[0m14:41:50.042315 [info ] [MainThread]:   timeout_seconds: 300
+[0m14:41:50.042931 [info ] [MainThread]:   client_id: None
+[0m14:41:50.043433 [info ] [MainThread]:   token_uri: None
+[0m14:41:50.044523 [info ] [MainThread]:   compute_region: None
+[0m14:41:50.046014 [info ] [MainThread]:   dataproc_cluster_name: None
+[0m14:41:50.048917 [info ] [MainThread]:   gcs_bucket: None
+[0m14:41:50.050284 [info ] [MainThread]:   dataproc_batch: None
+[0m14:41:50.052275 [info ] [MainThread]: Registered adapter: bigquery=1.10.2
+[0m14:41:50.599855 [debug] [MainThread]: Acquiring new bigquery connection 'debug'
+[0m14:41:50.600698 [debug] [MainThread]: On debug: select 1 as id
+[0m14:41:50.601227 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m14:41:54.106365 [debug] [MainThread]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=motionblend-ai&j=bq:US:0b1ec7be-26b5-498b-a0df-1c7bc775225a&page=queryresults
+[0m14:41:55.076962 [info ] [MainThread]:   Connection test: [[32mOK connection ok[0m]
+
+[0m14:41:55.077731 [info ] [MainThread]: [32mAll checks passed![0m
+[0m14:41:55.085169 [debug] [MainThread]: Resource report: {"command_name": "debug", "command_success": true, "command_wall_clock_time": 12.198775, "process_in_blocks": "0", "process_kernel_time": 1.567535, "process_mem_max_rss": "347250688", "process_out_blocks": "0", "process_user_time": 6.012737}
+[0m14:41:55.086115 [debug] [MainThread]: Command `dbt debug` succeeded at 14:41:55.085911 after 12.20 seconds
+[0m14:41:55.086786 [debug] [MainThread]: Connection 'debug' was properly closed.
+[0m14:41:55.087323 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x106b8c2f0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105e446b0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x105e44740>]}
+[0m14:41:55.087932 [debug] [MainThread]: Flushing usage events
+[0m14:41:56.419819 [debug] [MainThread]: An error was encountered while trying to flush usage events
+[0m14:42:24.614296 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'start', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10f9839e0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x11062caa0>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x11062c830>]}
+
+
+============================== 14:42:24.620674 | f5787433-6c80-452c-9cfd-b63476aa2c03 ==============================
+[0m14:42:24.620674 [info ] [MainThread]: Running with dbt=1.11.0-b3
+[0m14:42:24.621747 [debug] [MainThread]: running dbt with arguments {'printer_width': '80', 'quiet': 'False', 'version_check': 'True', 'warn_error_options': 'WarnErrorOptionsV2(error=[], warn=[], silence=[])', 'fail_fast': 'False', 'no_print': 'None', 'indirect_selection': 'eager', 'debug': 'False', 'cache_selected_only': 'False', 'introspect': 'True', 'send_anonymous_usage_stats': 'True', 'warn_error': 'None', 'log_cache_events': 'False', 'profiles_dir': '/Users/ted/.dbt', 'use_experimental_parser': 'False', 'write_json': 'True', 'partial_parse': 'True', 'log_format': 'default', 'log_path': '/Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/logs', 'use_colors': 'True', 'empty': 'False', 'invocation_command': 'dbt run --profiles-dir /Users/ted/.dbt --target dev', 'target_path': 'None', 'static_parser': 'True'}
+[0m14:42:28.207809 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'project_id', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10deacce0>]}
+[0m14:42:28.294186 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'adapter_info', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10df6bc80>]}
+[0m14:42:28.294920 [info ] [MainThread]: Registered adapter: bigquery=1.10.2
+[0m14:42:28.770754 [debug] [MainThread]: checksum: b042934ef30cd5d82ceff7c4c0aedbaf9a6ed02529bb2796afd88f60140000d3, vars: {}, profile: , target: dev, version: 1.11.0b3
+[0m14:42:28.772030 [info ] [MainThread]: Unable to do partial parsing because saved manifest not found. Starting full parse.
+[0m14:42:28.772835 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'partial_parser', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12c1961e0>]}
+[0m14:42:30.657870 [warn ] [MainThread]: [[33mWARNING[0m]: Configuration paths exist in your dbt_project.yml file which do not apply to any resources.
+There are 1 unused configuration paths:
+- models.motionblend.features
+[0m14:42:30.672935 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'load_project', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12c5e0260>]}
+[0m14:42:30.778823 [debug] [MainThread]: Wrote artifact WritableManifest to /Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/target/manifest.json
+[0m14:42:30.784028 [debug] [MainThread]: Wrote artifact SemanticManifest to /Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/target/semantic_manifest.json
+[0m14:42:30.821648 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'resource_counts', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12cce4980>]}
+[0m14:42:30.822299 [info ] [MainThread]: Found 3 models, 3 sources, 510 macros
+[0m14:42:30.823109 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12c7405c0>]}
+[0m14:42:30.825404 [info ] [MainThread]: 
+[0m14:42:30.825864 [info ] [MainThread]: Concurrency: 4 threads (target='dev')
+[0m14:42:30.826245 [info ] [MainThread]: 
+[0m14:42:30.826813 [debug] [MainThread]: Acquiring new bigquery connection 'master'
+[0m14:42:30.833015 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_motionblend-ai'
+[0m14:42:30.833966 [debug] [ThreadPool]: Acquiring new bigquery connection 'list_motionblend-ai'
+[0m14:42:30.834376 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m14:42:30.834871 [debug] [ThreadPool]: Opening a new connection, currently in state init
+[0m14:42:34.048153 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly list_motionblend-ai, now create_motionblend-ai_RAW_DEV_staging)
+[0m14:42:34.049155 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly list_motionblend-ai, now create_motionblend-ai_RAW_DEV_marts)
+[0m14:42:34.055441 [debug] [ThreadPool]: Creating schema "database: "motionblend-ai"
+schema: "RAW_DEV_staging"
+"
+[0m14:42:34.056830 [debug] [ThreadPool]: Creating schema "database: "motionblend-ai"
+schema: "RAW_DEV_marts"
+"
+[0m14:42:34.080684 [debug] [ThreadPool]: On create_motionblend-ai_RAW_DEV_staging: /* {"app": "dbt", "dbt_version": "1.11.0b3", "profile_name": "motionblend", "target_name": "dev", "connection_name": "create_motionblend-ai_RAW_DEV_staging"} */
+create schema if not exists `motionblend-ai`.`RAW_DEV_staging`
+  
+[0m14:42:34.081417 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m14:42:34.085985 [debug] [ThreadPool]: On create_motionblend-ai_RAW_DEV_marts: /* {"app": "dbt", "dbt_version": "1.11.0b3", "profile_name": "motionblend", "target_name": "dev", "connection_name": "create_motionblend-ai_RAW_DEV_marts"} */
+create schema if not exists `motionblend-ai`.`RAW_DEV_marts`
+  
+[0m14:42:34.086614 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m14:42:35.167818 [debug] [ThreadPool]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=motionblend-ai&j=bq:US:ef89ff22-1a50-4305-a098-46e34d819753&page=queryresults
+[0m14:42:35.170066 [debug] [ThreadPool]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=motionblend-ai&j=bq:US:98f49b8a-83b6-4852-b7a1-dc36f7b97b83&page=queryresults
+[0m14:42:36.439299 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly create_motionblend-ai_RAW_DEV_staging, now list_motionblend-ai_RAW_DEV_staging)
+[0m14:42:36.440402 [debug] [ThreadPool]: Re-using an available connection from the pool (formerly create_motionblend-ai_RAW_DEV_marts, now list_motionblend-ai_RAW_DEV_marts)
+[0m14:42:36.440990 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m14:42:36.441592 [debug] [ThreadPool]: Opening a new connection, currently in state closed
+[0m14:42:37.532243 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'runnable_timing', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12c890710>]}
+[0m14:42:37.533085 [debug] [MainThread]: Opening a new connection, currently in state init
+[0m14:42:37.542427 [debug] [Thread-1 (]: Began running node model.motionblend.stg_blend_snn
+[0m14:42:37.543174 [debug] [Thread-2 (]: Began running node model.motionblend.stg_seed_motions
+[0m14:42:37.544005 [info ] [Thread-1 (]: 1 of 3 START sql view model RAW_DEV_staging.stg_blend_snn ...................... [RUN]
+[0m14:42:37.544985 [info ] [Thread-2 (]: 2 of 3 START sql view model RAW_DEV_staging.stg_seed_motions ................... [RUN]
+[0m14:42:37.545806 [debug] [Thread-1 (]: Re-using an available connection from the pool (formerly list_motionblend-ai_RAW_DEV_staging, now model.motionblend.stg_blend_snn)
+[0m14:42:37.547509 [debug] [Thread-2 (]: Re-using an available connection from the pool (formerly list_motionblend-ai_RAW_DEV_marts, now model.motionblend.stg_seed_motions)
+[0m14:42:37.548165 [debug] [Thread-1 (]: Began compiling node model.motionblend.stg_blend_snn
+[0m14:42:37.548673 [debug] [Thread-2 (]: Began compiling node model.motionblend.stg_seed_motions
+[0m14:42:37.560979 [debug] [Thread-1 (]: Writing injected SQL for node "model.motionblend.stg_blend_snn"
+[0m14:42:37.564828 [debug] [Thread-2 (]: Writing injected SQL for node "model.motionblend.stg_seed_motions"
+[0m14:42:37.566713 [debug] [Thread-1 (]: Began executing node model.motionblend.stg_blend_snn
+[0m14:42:37.567673 [debug] [Thread-2 (]: Began executing node model.motionblend.stg_seed_motions
+[0m14:42:37.644717 [debug] [Thread-1 (]: Writing runtime sql for node "model.motionblend.stg_blend_snn"
+[0m14:42:37.646320 [debug] [Thread-2 (]: Writing runtime sql for node "model.motionblend.stg_seed_motions"
+[0m14:42:37.648599 [debug] [Thread-1 (]: On model.motionblend.stg_blend_snn: /* {"app": "dbt", "dbt_version": "1.11.0b3", "profile_name": "motionblend", "target_name": "dev", "node_id": "model.motionblend.stg_blend_snn"} */
+
+
+  create or replace view `motionblend-ai`.`RAW_DEV_staging`.`stg_blend_snn`
+  OPTIONS()
+  as -- models/staging/stg_blend_snn.sql
+-- Staging layer for blend_snn (Smooth Neural Network blends)
+
+WITH source AS (
+    SELECT * FROM `motionblend-ai`.`RAW_DEV`.`blend_snn`
+),
+
+renamed AS (
+    SELECT
+        id AS blend_id,
+        left_motion_id,
+        right_motion_id,
+        blend_ratio,
+        transition_start_frame,
+        transition_end_frame,
+        created_at,
+        updated_at
+    FROM source
+)
+
+SELECT * FROM renamed;
+
+
+[0m14:42:37.649190 [debug] [Thread-1 (]: Opening a new connection, currently in state closed
+[0m14:42:37.650471 [debug] [Thread-2 (]: On model.motionblend.stg_seed_motions: /* {"app": "dbt", "dbt_version": "1.11.0b3", "profile_name": "motionblend", "target_name": "dev", "node_id": "model.motionblend.stg_seed_motions"} */
+
+
+  create or replace view `motionblend-ai`.`RAW_DEV_staging`.`stg_seed_motions`
+  OPTIONS()
+  as -- models/staging/stg_seed_motions.sql
+-- Staging layer for raw seed motion files
+
+WITH source AS (
+    SELECT * FROM `motionblend-ai`.`RAW_DEV`.`seed_motions`
+),
+
+renamed AS (
+    SELECT
+        id,
+        file_uri,
+        skeleton_id,
+        frames,
+        fps,
+        joints_count,
+        created_at,
+        updated_at
+    FROM source
+)
+
+SELECT * FROM renamed;
+
+
+[0m14:42:37.650976 [debug] [Thread-2 (]: Opening a new connection, currently in state closed
+[0m14:42:38.854747 [debug] [Thread-1 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=motionblend-ai&j=bq:US:3e2b42d4-9161-4b99-b071-c86bdef5a152&page=queryresults
+[0m14:42:38.968118 [debug] [Thread-2 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=motionblend-ai&j=bq:US:a1268780-90f4-4645-bc67-3d35e87efda3&page=queryresults
+[0m14:42:39.814250 [debug] [Thread-1 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12ced2570>]}
+[0m14:42:39.815440 [debug] [Thread-2 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10f850b30>]}
+[0m14:42:39.816465 [info ] [Thread-1 (]: 1 of 3 OK created sql view model RAW_DEV_staging.stg_blend_snn ................. [[32mCREATE VIEW (0 processed)[0m in 2.26s]
+[0m14:42:39.817931 [info ] [Thread-2 (]: 2 of 3 OK created sql view model RAW_DEV_staging.stg_seed_motions .............. [[32mCREATE VIEW (0 processed)[0m in 2.26s]
+[0m14:42:39.819146 [debug] [Thread-1 (]: Finished running node model.motionblend.stg_blend_snn
+[0m14:42:39.820020 [debug] [Thread-2 (]: Finished running node model.motionblend.stg_seed_motions
+[0m14:42:39.820845 [debug] [Thread-2 (]: Began running node model.motionblend.mart_blend_snn_metrics
+[0m14:42:39.821634 [info ] [Thread-2 (]: 3 of 3 START sql table model RAW_DEV_marts.mart_blend_snn_metrics .............. [RUN]
+[0m14:42:39.823458 [debug] [Thread-2 (]: Re-using an available connection from the pool (formerly model.motionblend.stg_seed_motions, now model.motionblend.mart_blend_snn_metrics)
+[0m14:42:39.824098 [debug] [Thread-2 (]: Began compiling node model.motionblend.mart_blend_snn_metrics
+[0m14:42:39.827900 [debug] [Thread-2 (]: Writing injected SQL for node "model.motionblend.mart_blend_snn_metrics"
+[0m14:42:39.828780 [debug] [Thread-2 (]: Began executing node model.motionblend.mart_blend_snn_metrics
+[0m14:42:39.877045 [debug] [Thread-2 (]: Writing runtime sql for node "model.motionblend.mart_blend_snn_metrics"
+[0m14:42:39.878076 [debug] [Thread-2 (]: On model.motionblend.mart_blend_snn_metrics: /* {"app": "dbt", "dbt_version": "1.11.0b3", "profile_name": "motionblend", "target_name": "dev", "node_id": "model.motionblend.mart_blend_snn_metrics"} */
+
+  
+    
+
+    create or replace table `motionblend-ai`.`RAW_DEV_marts`.`mart_blend_snn_metrics`
+      
+    
+    
+
+    
+    OPTIONS()
+    as (
+      -- models/marts/mart_blend_snn_metrics.sql
+-- Final metrics for blend_snn quality analysis
+
+WITH blend_base AS (
+    SELECT
+        blend_id,
+        left_motion_id,
+        right_motion_id,
+        blend_ratio,
+        transition_start_frame,
+        transition_end_frame
+    FROM `motionblend-ai`.`RAW_DEV_staging`.`stg_blend_snn`
+),
+
+-- Placeholder for computed metrics
+-- In production, these would come from UDFs or pre-computed feature tables
+metrics_placeholder AS (
+    SELECT
+        blend_id,
+        -- Quality metrics (0-1 scale)
+        0.19 AS fid,
+        0.97 AS coverage,
+        1.56 AS gdiv,
+        1.44 AS ldiv,
+        0.60 AS inter_div,
+        0.38 AS intra_div,
+        
+        -- Velocity/acceleration stats
+        0.3245 AS l2_velocity_mean,
+        0.0892 AS l2_acceleration_mean,
+        0.1234 AS transition_smoothness,
+        
+        -- Quality score (derived)
+        0.85 AS quality_score,
+        'good' AS quality_category
+    FROM blend_base
+)
+
+SELECT
+    b.*,
+    m.fid,
+    m.coverage,
+    m.gdiv,
+    m.ldiv,
+    m.inter_div,
+    m.intra_div,
+    m.l2_velocity_mean,
+    m.l2_acceleration_mean,
+    m.transition_smoothness,
+    m.quality_score,
+    m.quality_category,
+    CURRENT_TIMESTAMP() AS computed_at
+FROM blend_base b
+JOIN metrics_placeholder m USING (blend_id)
+    );
+  
+[0m14:42:39.878610 [debug] [Thread-2 (]: Opening a new connection, currently in state closed
+[0m14:42:41.497978 [debug] [Thread-2 (]: BigQuery adapter: https://console.cloud.google.com/bigquery?project=motionblend-ai&j=bq:US:f47464c2-b144-4e55-8e96-1a02f1d03a1e&page=queryresults
+[0m14:42:44.338634 [debug] [Thread-2 (]: Sending event: {'category': 'dbt', 'action': 'run_model', 'label': 'f5787433-6c80-452c-9cfd-b63476aa2c03', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12d34fb90>]}
+[0m14:42:44.339954 [info ] [Thread-2 (]: 3 of 3 OK created sql table model RAW_DEV_marts.mart_blend_snn_metrics ......... [[32mCREATE TABLE (2.0 rows, 0 processed)[0m in 4.52s]
+[0m14:42:44.341210 [debug] [Thread-2 (]: Finished running node model.motionblend.mart_blend_snn_metrics
+[0m14:42:44.342988 [debug] [MainThread]: Opening a new connection, currently in state closed
+[0m14:42:44.343724 [debug] [MainThread]: Connection 'master' was properly closed.
+[0m14:42:44.344119 [debug] [MainThread]: Connection 'model.motionblend.stg_blend_snn' was properly closed.
+[0m14:42:44.344495 [debug] [MainThread]: Connection 'model.motionblend.mart_blend_snn_metrics' was properly closed.
+[0m14:42:44.344998 [info ] [MainThread]: 
+[0m14:42:44.345478 [info ] [MainThread]: Finished running 1 table model, 2 view models in 0 hours 0 minutes and 13.52 seconds (13.52s).
+[0m14:42:44.349131 [debug] [MainThread]: Command end result
+[0m14:42:44.383747 [debug] [MainThread]: Wrote artifact WritableManifest to /Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/target/manifest.json
+[0m14:42:44.386119 [debug] [MainThread]: Wrote artifact SemanticManifest to /Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/target/semantic_manifest.json
+[0m14:42:44.393852 [debug] [MainThread]: Wrote artifact RunExecutionResult to /Users/ted/blenderkit_data/MotionBlendAI-1/dbt_project/target/run_results.json
+[0m14:42:44.394344 [info ] [MainThread]: 
+[0m14:42:44.394886 [info ] [MainThread]: [32mCompleted successfully[0m
+[0m14:42:44.395370 [info ] [MainThread]: 
+[0m14:42:44.395852 [info ] [MainThread]: Done. PASS=3 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=3
+[0m14:42:44.398538 [debug] [MainThread]: Resource report: {"command_name": "run", "command_success": true, "command_wall_clock_time": 19.884691, "process_in_blocks": "0", "process_kernel_time": 1.280902, "process_mem_max_rss": "362254336", "process_out_blocks": "0", "process_user_time": 8.201411}
+[0m14:42:44.399186 [debug] [MainThread]: Command `dbt run` succeeded at 14:42:44.399054 after 19.89 seconds
+[0m14:42:44.399664 [debug] [MainThread]: Sending event: {'category': 'dbt', 'action': 'invocation', 'label': 'end', 'context': [<snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x10bc52b70>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12c6dc890>, <snowplow_tracker.self_describing_json.SelfDescribingJson object at 0x12d38f2f0>]}
+[0m14:42:44.400091 [debug] [MainThread]: Flushing usage events
+[0m14:42:45.502863 [debug] [MainThread]: An error was encountered while trying to flush usage events

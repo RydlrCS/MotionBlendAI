@@ -1272,6 +1272,115 @@ body {
   transform: translateX(2px);
 }
 
+/* Quality Badge Styles */
+.quality-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 8px;
+}
+
+.quality-badge.good {
+  background: rgba(0, 255, 136, 0.15);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+
+.quality-badge.fair {
+  background: rgba(255, 170, 0, 0.15);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.quality-badge.poor {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* Metrics Summary Panel */
+.metrics-summary {
+  background: rgba(0, 102, 204, 0.05);
+  border: 1px solid rgba(0, 102, 204, 0.3);
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.metrics-summary h5 {
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.metric-card {
+  background: var(--primary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.metric-card:hover {
+  border-color: var(--highlight);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 210, 255, 0.1);
+}
+
+.metric-card .metric-label {
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.metric-card .metric-value {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'SF Mono', 'Monaco', monospace;
+}
+
+.metric-card .metric-value.quality-good {
+  color: var(--success);
+}
+
+.metric-card .metric-value.quality-fair {
+  color: var(--warning);
+}
+
+.metric-card .metric-value.quality-poor {
+  color: #ef4444;
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .metric-card {
+    padding: 10px;
+  }
+}
+
 .artifact-desc {
   flex: 1;
   background: var(--secondary-bg);
@@ -1439,6 +1548,14 @@ body {
 
 .quality-good {
   color: var(--success);
+}
+
+.quality-fair {
+  color: var(--warning);
+}
+
+.quality-poor {
+  color: #ef4444;
 }
 
 @media (max-width: 768px) {

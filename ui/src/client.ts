@@ -83,6 +83,16 @@ export async function describeArtifact(name:string){
   return res.data
 }
 
+export async function getArtifactAnalysis(artifactId: string) {
+  try {
+    const res = await axios.get(`${API_BASE}/api/artifact/${encodeURIComponent(artifactId)}/analysis`)
+    return res.data
+  } catch (error) {
+    console.error('Failed to fetch artifact analysis:', error)
+    return null
+  }
+}
+
 // Search motions using Elasticsearch vector search
 export async function searchMotions(query: SearchQuery): Promise<any[]> {
   try {

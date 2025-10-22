@@ -1,0 +1,45 @@
+# Fivetran Connector Configuration
+source:
+  type: gcs
+  bucket: motionblend-mocap
+  prefixes:
+    - mocap/seed/
+    - mocap/build/
+    - mocap/blend_snn/
+  include_extensions:
+    - ".bvh"
+    - ".fbx"
+    - ".trc"
+  batch_size: 25
+  max_file_size_mb: 50
+
+output:
+  bigquery_project: motionblend-dev
+  bigquery_dataset: RAW
+  tables:
+    seed_motions:
+      source_prefix: "mocap/seed/"
+      schema_version: "v1"
+    build_motions:
+      source_prefix: "mocap/build/"
+      schema_version: "v1"
+    blend_snn:
+      source_prefix: "mocap/blend_snn/"
+      schema_version: "v1"
+
+retry:
+  max_attempts: 7
+  base_delay_seconds: 0.5
+  max_delay_seconds: 30
+  backoff_factor: 2
+  jitter: true
+
+logging:
+  format: json
+  level: INFO
+  correlation_id_header: X-Correlation-ID
+  
+circuit_breaker:
+  failure_threshold: 0.5
+  window_seconds: 300
+  cooldown_seconds: 120

@@ -1,0 +1,21 @@
+# Multi-stage Dockerfile for dbt runner
+# Optimized with BuildKit caching
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install dbt and dependencies
+RUN pip install --no-cache-dir \
+    dbt-bigquery>=1.7.0 \
+    && rm -rf /root/.cache/pip
+
+# Copy dbt project
+COPY dbt_project/ /app/dbt_project/
+
+# Run as non-root user
+RUN useradd -m -u 1000 dbt && chown -R dbt:dbt /app
+USER dbt
+
+ENTRYPOINT ["dbt"]
+CMD ["run", "--help"]

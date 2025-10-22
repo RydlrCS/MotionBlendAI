@@ -71,6 +71,71 @@ from typing import Dict, List, Any, Optional, TypedDict, Union
 from datetime import datetime
 import numpy as np
 import logging
+import time
+import functools
+from contextlib import contextmanager
+
+# WCAG-friendly color palette for motion strips
+DEFAULT_COLORS = [
+    "#2FBF71",  # Salsa - Green
+    "#F0A202",  # Swing - Amber
+    "#2D7DD2",  # Wave - Blue
+    "#E63946",  # Funk - Red
+    "#9C27B0",  # Jazz - Purple
+    "#00897B",  # Ballet - Teal
+    "#FF6F00",  # Hip-hop - Orange
+]
+
+# ============================================================================
+# PERFORMANCE & DEBUGGING UTILITIES
+# ============================================================================
+
+# Configure enhanced logging
+logging.basicConfig(
+    level=logging.DEBUG if DEBUG_MODE else logging.INFO,
+    format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger(__name__)
+
+@contextmanager
+def timer_context(operation_name: str):
+    """Context manager to time operations and log performance"""
+    start = time.time()
+    logger.info(f"⏱️  START: {operation_name}")
+    try:
+        yield
+    finally:
+        elapsed = time.time() - start
+        logger.info(f"✅ COMPLETE: {operation_name} | Duration: {elapsed:.3f}s")
+
+def retry_with_backoff(max_retries: int = 3, initial_delay: float = 1.0, backoff_factor: float = 2.0):
+    """Decorator to retry functions with exponential backoff"""
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            delay = initial_delay
+            last_exception = None
+            
+            for attempt in range(max_retries):
+                try:
+                    logger.debug(f"🔄 Attempt {attempt + 1}/{max_retries}: {func.__name__}")
+                    result = func(*args, **kwargs)
+                    if attempt > 0:
+                        logger.info(f"✅ Retry succeeded for {func.__name__} after {attempt + 1} attempts")
+                    return result
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        logger.warning(f"⚠️  Attempt {attempt + 1} failed for {func.__name__}: {e}. Retrying in {delay}s...")
+                        time.sleep(delay)
+                        delay *= backoff_factor
+                    else:
+                        logger.error(f"❌ All {max_retries} attempts failed for {func.__name__}: {e}")
+            
+            raise last_exception
+        return wrapper
+    return decorator
 
 # Type definitions for motion data
 class MotionMetadata(TypedDict, total=False):
@@ -269,56 +334,58 @@ def create_motion_mappings() -> Dict[str, Any]:
         }
     }
 
+@retry_with_backoff(max_retries=3, initial_delay=2.0, backoff_factor=2.0)
 def initialize_elasticsearch():
     """Initialize Elasticsearch connection and create index with mappings."""
     global es, es_available
     
+    logger.info("🔌 Initializing Elasticsearch connection...")
+    
     if not elasticsearch_available:
-        print("Elasticsearch library not available")
+        logger.warning("⚠️  Elasticsearch library not available")
         return
     
     try:
         # Connect to Elasticsearch (prefer local Docker setup, fallback to cloud)
         if ELASTICSEARCH_URL:
             # Local Elasticsearch in Docker
-            es = Elasticsearch(
-                [ELASTICSEARCH_URL]
-            )
-            print(f"Attempting connection to local Elasticsearch: {ELASTICSEARCH_URL}")
+            logger.info(f"🐳 Attempting connection to local Elasticsearch: {ELASTICSEARCH_URL}")
+            es = Elasticsearch([ELASTICSEARCH_URL])
         else:
             # Cloud Elasticsearch with semantic text support
-            es = Elasticsearch(
-                [ES_CLOUD_URL],
-                api_key=ES_API_KEY
-            )
-            print(f"Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
+            logger.info(f"☁️  Attempting connection to Elasticsearch Cloud: {ES_CLOUD_URL}")
+            es = Elasticsearch([ES_CLOUD_URL], api_key=ES_API_KEY)
         
-        # Test connection
-        if es is not None and hasattr(es, 'ping') and es.ping():  # type: ignore
-            es_available = True
-            cluster_info = es.info()  # type: ignore
-            print(f"✅ Connected to Elasticsearch {cluster_info['version']['number']}")  # type: ignore
-            
-            # Create index if it doesn't exist
-            if not es.indices.exists(index=ES_INDEX_NAME):  # type: ignore
-                mappings = {"mappings": create_motion_mappings()}
-                es.indices.create(index=ES_INDEX_NAME, body=mappings)  # type: ignore
-                print(f"✅ Created index '{ES_INDEX_NAME}' with semantic text mappings")
+        # Test connection with timeout logging
+        with timer_context("Elasticsearch ping"):
+            if es is not None and hasattr(es, 'ping') and es.ping():  # type: ignore
+                es_available = True
+                cluster_info = es.info()  # type: ignore
+                logger.info(f"✅ Connected to Elasticsearch {cluster_info['version']['number']}")  # type: ignore
+                
+                # Create index if it doesn't exist
+                with timer_context("Ensure Elasticsearch index"):
+                    if not es.indices.exists(index=ES_INDEX_NAME):  # type: ignore
+                        mappings = {"mappings": create_motion_mappings()}
+                        es.indices.create(index=ES_INDEX_NAME, body=mappings)  # type: ignore
+                        logger.info(f"✅ Created index '{ES_INDEX_NAME}' with semantic text mappings")
+                    else:
+                        # Update existing index mappings
+                        try:
+                            mappings = create_motion_mappings()
+                            es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)  # type: ignore
+                            logger.info(f"✅ Updated mappings for index '{ES_INDEX_NAME}'")
+                        except Exception as mapping_error:
+                            logger.warning(f"⚠️  Mapping update: {mapping_error}")
             else:
-                # Update existing index mappings
-                try:
-                    mappings = create_motion_mappings()
-                    es.indices.put_mapping(index=ES_INDEX_NAME, body=mappings)  # type: ignore
-                    print(f"✅ Updated mappings for index '{ES_INDEX_NAME}'")
-                except Exception as mapping_error:
-                    print(f"⚠️ Mapping update: {mapping_error}")
-        else:
-            print("❌ Elasticsearch ping failed")
-            es_available = False
-            es = None
+                logger.error("❌ Elasticsearch ping failed")
+                es_available = False
+                es = None
     
     except Exception as e:
-        print(f"❌ Elasticsearch connection failed: {e}")
+        logger.error(f"❌ Elasticsearch connection failed: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
         es_available = False
         es = None
 
@@ -331,39 +398,66 @@ import os
 from pathlib import Path
 
 def load_seed_motions():
-    """Load actual motion files from seed_motions directory"""
-    seed_dir = Path(__file__).parent.parent / "seed_motions"
-    motion_files = []
-    
-    if seed_dir.exists():
-        for file_path in seed_dir.glob("*.*"):
-            if file_path.suffix.lower() in ['.fbx', '.glb', '.trc']:
-                # Extract motion characteristics from filename
-                name = file_path.stem
-                category = categorize_motion(name)
+    """Load actual motion files from seed_motions directory with performance logging"""
+    with timer_context("Loading seed motions"):
+        seed_dir = Path(__file__).parent.parent / "seed_motions"
+        motion_files = []
+        
+        # DEBUG MODE: Load only 1 file for fast UI testing
+        DEBUG_MODE = os.getenv('DEBUG_MODE', 'true').lower() == 'true'
+        MAX_FILES = 1 if DEBUG_MODE else 100
+        
+        logger.info(f"📁 Seed motions path: {seed_dir}")
+        logger.info(f"🐛 DEBUG_MODE={DEBUG_MODE}, MAX_FILES={MAX_FILES}")
+        
+        if not seed_dir.exists():
+            logger.warning(f"⚠️  Seed motions directory not found: {seed_dir}")
+            return []
+        
+        file_list = list(seed_dir.glob("*.*"))
+        logger.info(f"📊 Found {len(file_list)} total files in seed_motions/")
+        
+        file_count = 0
+        for i, file_path in enumerate(file_list, 1):
+            if len(motion_files) >= MAX_FILES:
+                logger.info(f"🔧 DEBUG MODE: Loaded {MAX_FILES} file(s) for testing (stopped at {i}/{len(file_list)})")
+                break
                 
-                motion_files.append({
-                    "id": f"seed_{len(motion_files)+1:03d}",
-                    "name": name,
-                    "description": f"Motion capture file: {name}",
-                    "file_path": str(file_path),
-                    "file_format": file_path.suffix.lower(),
-                    "vector": generate_motion_vector(name),
-                    "metadata": {
-                        "category": category,
-                        "source": "seed_motions",
-                        "format": file_path.suffix.upper(),
-                        "file_size": file_path.stat().st_size if file_path.exists() else 0,
-                        "frames": estimate_frames(name),
-                        "duration": estimate_duration(name),
-                        "joints": 25,
-                        "complexity": estimate_complexity(name),
-                        "intensity": estimate_intensity(name),
-                        "tags": extract_tags(name)
-                    }
-                })
-    
-    return motion_files
+            if file_path.suffix.lower() in ['.fbx', '.glb', '.trc']:
+                try:
+                    # Extract motion characteristics from filename
+                    name = file_path.stem
+                    category = categorize_motion(name)
+                    
+                    logger.debug(f"📄 Processing {i}/{len(file_list)}: {name} (category: {category})")
+                    
+                    motion_files.append({
+                        "id": f"seed_{len(motion_files)+1:03d}",
+                        "name": name,
+                        "description": f"Motion capture file: {name}",
+                        "file_path": str(file_path),
+                        "file_format": file_path.suffix.lower(),
+                        "vector": generate_motion_vector(name),
+                        "metadata": {
+                            "category": category,
+                            "source": "seed_motions",
+                            "format": file_path.suffix.upper(),
+                            "file_size": file_path.stat().st_size if file_path.exists() else 0,
+                            "frames": estimate_frames(name),
+                            "duration": estimate_duration(name),
+                            "joints": 25,
+                            "complexity": estimate_complexity(name),
+                            "intensity": estimate_intensity(name),
+                            "tags": extract_tags(name)
+                        }
+                    })
+                    file_count += 1
+                except Exception as e:
+                    logger.error(f"❌ Failed to process {file_path.name}: {e}")
+                    continue
+        
+        logger.info(f"✅ Loaded {len(motion_files)} seed motions successfully ({file_count} processed)")
+        return motion_files
 
 def categorize_motion(name: str) -> str:
     """Categorize motion based on filename"""
@@ -460,9 +554,13 @@ def generate_motion_vector(name: str) -> List[float]:
 # Load seed motions and combine with mock data
 seed_motions = load_seed_motions()
 
+# DEBUG MODE: Limit mock motions to 5 for fast testing
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'true').lower() == 'true'
+MAX_MOCK_MOTIONS = 3 if DEBUG_MODE else 200
+
 # Mock motion data for development and testing
 # This provides realistic motion capture metadata for UI development
-MOCK_MOTIONS = seed_motions + [
+_ALL_MOCK_MOTIONS = [
     # === LOCOMOTION CATEGORY ===
     {
         "id": "motion_001",
@@ -839,6 +937,11 @@ MOCK_MOTIONS = seed_motions + [
         "created_at": "2025-10-09T11:35:00Z"
     }
 ]
+
+# Apply debug mode limiting
+MOCK_MOTIONS = seed_motions + _ALL_MOCK_MOTIONS[:MAX_MOCK_MOTIONS]
+if DEBUG_MODE:
+    print(f"🔧 DEBUG MODE: Limited to {len(seed_motions)} seed motion(s) + {min(MAX_MOCK_MOTIONS, len(_ALL_MOCK_MOTIONS))} mock motions = {len(MOCK_MOTIONS)} total")
 
 def calculate_similarity(vec1: List[float], vec2: List[float]) -> float:
     """Calculate cosine similarity between two vectors."""
@@ -1538,62 +1641,322 @@ def refresh_motions():
 # Global artifacts storage
 ARTIFACTS_STORE = []
 
-@app.route('/api/blend', methods=['POST', 'OPTIONS'])
-def create_blend():
-    """Create a new motion blend and generate artifact"""
-    if request.method == 'OPTIONS':
-        # Handle preflight CORS request
-        response = jsonify({'status': 'ok'})
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-        return response
+def generate_frame_thumbnail(frame_index: int, motion_hash: int, motion_type: str = 'blend') -> str:
+    """Generate a placeholder thumbnail data URL for a frame"""
+    # Create a simple colored SVG as placeholder
+    # In production, this would generate actual rendered frames
     
-    try:
-        data = request.get_json()
-        motion1 = data.get('motion1')
-        motion2 = data.get('motion2') 
-        weight = data.get('weight', 0.5)
-        
-        # Generate unique blend ID
-        blend_id = f"blend_{int(time.time() * 1000)}"
-        timestamp = datetime.utcnow().isoformat()
-        
-        # Create blend artifact
-        artifact = {
-            "id": blend_id,
-            "name": f"{motion1}_{motion2}_blend_{weight:.2f}",
-            "type": "motion_blend",
-            "status": "completed",
-            "created_at": timestamp,
-            "metadata": {
-                "source_motions": [motion1, motion2],
-                "blend_weight": weight,
-                "frames": 120,  # Mock frame count
-                "duration": 4.0,  # Mock duration
-                "format": "BVH",
-                "size": "2.3 MB"
-            },
-            "description": f"Blended motion combining {motion1} ({(1-weight)*100:.0f}%) and {motion2} ({weight*100:.0f}%)",
-            "file_path": f"/artifacts/{blend_id}.bvh"
-        }
-        
-        # Store the artifact
-        ARTIFACTS_STORE.append(artifact)
-        
-        logger.info(f"Created blend artifact: {blend_id}")
-        
-        return jsonify({
-            "status": "success",
-            "artifact": artifact,
-            "message": f"Blend created successfully with weight {weight}"
-        })
-        
-    except Exception as e:
-        logger.error(f"Blend creation error: {e}")
-        return jsonify({"error": str(e)}), 500
+    # Use hash to create consistent colors
+    hue = (motion_hash + frame_index * 137) % 360
+    
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
+        <rect width="80" height="80" fill="hsl({hue}, 60%, 50%)"/>
+        <text x="40" y="45" text-anchor="middle" font-size="14" fill="white" font-family="monospace">
+            F{frame_index}
+        </text>
+    </svg>'''
+    
+    # Convert to base64 data URL
+    import base64
+    svg_bytes = svg.encode('utf-8')
+    b64 = base64.b64encode(svg_bytes).decode('utf-8')
+    return f"data:image/svg+xml;base64,{b64}"
 
-@app.route('/api/artifacts', methods=['GET'])
+def generate_source_motion_data(motion_name: str, motion_hash: int, frames: int, color: str) -> Dict[str, Any]:
+    """Generate source motion data for strip visualization"""
+    sample_every = 10  # Sample every 10th frame
+    sampled_frames = list(range(0, frames, sample_every))
+    
+    thumbnails = [
+        generate_frame_thumbnail(f, motion_hash, 'source')
+        for f in sampled_frames
+    ]
+    
+    return {
+        "id": f"source_{motion_hash}_{motion_name.replace(' ', '_').lower()}",
+        "label": motion_name,
+        "character": "Default",
+        "frames": frames,
+        "sampleEvery": sample_every,
+        "thumbnails": thumbnails,
+        "color": color
+    }
+
+def generate_blend_motion_data(
+    blend_id: str,
+    motion1: str,
+    motion2: str,
+    frames: int,
+    weight: float,
+    motion_hash: int,
+    transition_start: int,
+    transition_end: int
+) -> Dict[str, Any]:
+    """Generate blend motion data with segments for strip visualization"""
+    sample_every = 10
+    sampled_frames = list(range(0, frames, sample_every))
+    
+    thumbnails = [
+        generate_frame_thumbnail(f, motion_hash, 'blend')
+        for f in sampled_frames
+    ]
+    
+    # Create segments based on transition windows
+    # Colors from MOTION_COLORS palette
+    color1 = DEFAULT_COLORS[hash(motion1) % len(DEFAULT_COLORS)]
+    color2 = DEFAULT_COLORS[hash(motion2) % len(DEFAULT_COLORS)]
+    
+    segments = []
+    
+    # Pre-transition: Motion 1 dominant
+    if transition_start > 0:
+        segments.append({
+            "fromFrame": 0,
+            "toFrame": transition_start - 1,
+            "label": motion1,
+            "color": color1,
+            "alpha": 1.0
+        })
+    
+    # Transition: Blend of both
+    segments.append({
+        "fromFrame": transition_start,
+        "toFrame": transition_end,
+        "label": f"{motion1} → {motion2}",
+        "color": color1,
+        "alpha": 1.0 - weight
+    })
+    segments.append({
+        "fromFrame": transition_start,
+        "toFrame": transition_end,
+        "label": f"{motion1} → {motion2}",
+        "color": color2,
+        "alpha": weight
+    })
+    
+    # Post-transition: Motion 2 dominant
+    if transition_end < frames - 1:
+        segments.append({
+            "fromFrame": transition_end + 1,
+            "toFrame": frames - 1,
+            "label": motion2,
+            "color": color2,
+            "alpha": 1.0
+        })
+    
+    return {
+        "id": blend_id,
+        "label": f"{motion1} to {motion2} (w={weight:.2f})",
+        "frames": frames,
+        "sampleEvery": sample_every,
+        "thumbnails": thumbnails,
+        "segments": segments
+    }
+
+def generate_blend_analysis(motion_hash: int, frames: int, duration: float, weight: float) -> Dict[str, Any]:
+    """Generate analysis metrics for a motion blend"""
+    
+    # Use motion_hash for deterministic but varied data
+    np.random.seed(motion_hash % 10000)
+    
+    # Generate L2 velocity data (per-frame, 5 joints)
+    time_points = np.linspace(0, duration, frames)
+    joint_names = ['Hips', 'LeftWrist', 'RightWrist', 'LeftFoot', 'RightFoot']
+    
+    # Base velocity patterns influenced by weight
+    l2_velocity = {}
+    l2_acceleration = {}
+    
+    for joint in joint_names:
+        # Create realistic velocity patterns with transitions
+        transition_start = frames // 3
+        transition_end = 2 * frames // 3
+        
+        velocities = []
+        for t in range(frames):
+            if t < transition_start:
+                # Pre-transition (more influenced by motion1)
+                base_vel = 0.3 + np.random.rand() * 0.2 * (1 - weight)
+            elif t < transition_end:
+                # Transition period (increased velocity variation)
+                blend_factor = (t - transition_start) / (transition_end - transition_start)
+                base_vel = 0.5 + 0.3 * np.sin(blend_factor * np.pi) + np.random.rand() * 0.3
+            else:
+                # Post-transition (more influenced by motion2)
+                base_vel = 0.3 + np.random.rand() * 0.2 * weight
+            
+            velocities.append(float(base_vel))
+        
+        l2_velocity[joint] = velocities
+        
+        # Compute acceleration from velocity
+        accelerations = [0.0]  # First frame has no acceleration
+        for i in range(1, len(velocities)):
+            accel = abs(velocities[i] - velocities[i-1])
+            accelerations.append(float(accel))
+        
+        l2_acceleration[joint] = accelerations
+    
+    # Compute aggregate metrics
+    all_velocities = np.concatenate([l2_velocity[j] for j in joint_names])
+    all_accelerations = np.concatenate([l2_acceleration[j] for j in joint_names])
+    
+    # Transition smoothness (lower is better, measures discontinuity)
+    transition_velocities = []
+    for joint in joint_names:
+        transition_velocities.extend(l2_velocity[joint][transition_start:transition_end])
+    transition_smoothness = float(np.std(transition_velocities))
+    
+    # Global diversity (variation across all frames and joints)
+    global_diversity = float(np.std(all_velocities))
+    
+    # Compute quality score (combination of smoothness and consistency)
+    quality_score = 1.0 - min(transition_smoothness / 0.5, 1.0)  # Normalize to 0-1
+    quality_category = "good" if quality_score > 0.7 else ("fair" if quality_score > 0.5 else "poor")
+    
+    return {
+        "l2_velocity": l2_velocity,
+        "l2_acceleration": l2_acceleration,
+        "metrics": {
+            "mean_velocity": float(np.mean(all_velocities)),
+            "std_velocity": float(np.std(all_velocities)),
+            "max_velocity": float(np.max(all_velocities)),
+            "mean_acceleration": float(np.mean(all_accelerations)),
+            "std_acceleration": float(np.std(all_accelerations)),
+            "transition_smoothness": transition_smoothness,
+            "global_diversity": global_diversity,
+            "quality_score": quality_score,
+            "quality_category": quality_category
+        },
+        "transition_window": {
+            "start": transition_start,
+            "end": transition_end
+        },
+        "joint_names": joint_names,
+        "time_points": time_points.tolist()
+    }
+
+@app.route('/api/blend', methods=['POST', 'OPTIONS'])
+@retry_with_backoff(max_retries=2, initial_delay=0.5, backoff_factor=2.0)
+def create_blend():
+    """Create a new motion blend and generate artifact with analysis"""
+    with timer_context("Create blend artifact"):
+        if request.method == 'OPTIONS':
+            # Handle preflight CORS request
+            response = jsonify({'status': 'ok'})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+            return response
+        
+        try:
+            with timer_context("Parse blend request data"):
+                data = request.get_json()
+                motion1 = data.get('motion1')
+                motion2 = data.get('motion2') 
+                weight = data.get('weight', 0.5)
+                
+                logger.info(f"🎬 Creating blend: {motion1} + {motion2} (weight={weight})")
+                
+                # Generate unique blend ID
+                blend_id = f"blend_{int(time.time() * 1000)}"
+                timestamp = datetime.utcnow().isoformat()
+                
+                # Create a hash from motion names for consistent but unique data generation
+                import hashlib
+                motion_hash = int(hashlib.md5(f"{motion1}{motion2}".encode()).hexdigest()[:8], 16)
+            
+            # Generate varied metadata based on source motions
+            base_frames = 100 + (motion_hash % 50)  # 100-150 frames
+            base_duration = base_frames / 30.0
+            
+            logger.debug(f"📊 Blend parameters: frames={base_frames}, duration={base_duration:.2f}s, hash={motion_hash}")
+            
+            # Generate analysis data automatically
+            with timer_context("Generate blend analysis"):
+                analysis_data = generate_blend_analysis(motion_hash, base_frames, base_duration, weight)
+            
+            transition_start = analysis_data["transition_window"]["start"]
+            transition_end = analysis_data["transition_window"]["end"]
+            
+            # Generate source motion data for strips
+            source1_frames = int(base_frames * 0.8)  # Slightly shorter for variety
+            source2_frames = int(base_frames * 0.9)
+            
+            with timer_context("Generate source motion data"):
+                sources = [
+                    generate_source_motion_data(motion1, motion_hash, source1_frames, DEFAULT_COLORS[0]),
+                    generate_source_motion_data(motion2, motion_hash + 1, source2_frames, DEFAULT_COLORS[1])
+                ]
+            
+            # Generate blend motion data with segments
+            with timer_context("Generate blend motion data"):
+                blend_data = generate_blend_motion_data(
+                    blend_id, motion1, motion2, base_frames, weight,
+                    motion_hash, transition_start, transition_end
+                )
+            
+            # Prepare metrics in new format
+            metrics_formatted = {
+                "joints": ["pelvis", "lwrist", "rwrist", "lfoot", "rfoot"],
+                "l2Velocity": analysis_data["l2_velocity"],
+                "l2Acceleration": analysis_data["l2_acceleration"],
+                "transitionWindows": [{
+                    "start": transition_start,
+                    "end": transition_end
+                }]
+            }
+            
+            # Create blend artifact with strip visualization data
+            artifact = {
+                "id": blend_id,
+                "name": f"{motion1} to {motion2} ({weight:.2f})",
+                "type": "motion_blend",
+                "status": "completed",
+                "createdAt": timestamp,
+                "created_at": timestamp,  # Legacy
+                "fps": 30,
+                "frames": base_frames,
+                "sources": sources,
+                "blend": blend_data,
+                "metrics": metrics_formatted,
+                "files": {
+                    "previewPng": f"/artifacts/{blend_id}_preview.png",
+                    "metricsJson": f"/artifacts/{blend_id}_metrics.json"
+                },
+                # Legacy fields for backward compatibility
+                "metadata": {
+                    "source_motions": [motion1, motion2],
+                    "blend_weight": weight,
+                    "frames": base_frames,
+                    "duration": base_duration,
+                    "format": "BVH",
+                    "size": f"{2.0 + (motion_hash % 30) / 10:.1f} MB",
+                    "motion_hash": motion_hash,
+                    "quality_score": analysis_data["metrics"]["quality_score"],
+                    "quality_category": analysis_data["metrics"]["quality_category"]
+                },
+                "description": f"Blended motion combining {motion1} ({(1-weight)*100:.0f}%) and {motion2} ({weight*100:.0f}%)",
+                "file_path": f"/artifacts/{blend_id}.bvh",
+                "analysis": analysis_data
+            }
+            
+            # Store the artifact
+            ARTIFACTS_STORE.append(artifact)
+            
+            logger.info(f"✅ Created blend artifact: {blend_id} with quality score {analysis_data['metrics']['quality_score']:.2f}")
+            
+            return jsonify({
+                "status": "success",
+                "artifact": artifact,
+                "message": f"Blend created successfully with weight {weight}"
+            })
+            
+        except Exception as e:
+            logger.error(f"❌ Blend creation error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            return jsonify({"error": str(e)}), 500@app.route('/api/artifacts', methods=['GET'])
 def get_artifacts():
     """Get all generated artifacts"""
     return jsonify({
@@ -1631,31 +1994,87 @@ def describe_artifact(artifact_name):
         "detailed_description": f"Motion blend artifact generated from {artifact['metadata']['source_motions']}",
         "technical_info": {
             "blend_algorithm": "Linear interpolation",
-            "quality_score": 0.92,
+            "quality_score": artifact.get("metadata", {}).get("quality_score", 0.92),
             "compression": "None",
             "compatible_formats": ["BVH", "FBX", "USD"]
         }
     })
 
+@app.route('/api/artifact/<artifact_id>/analysis', methods=['GET'])
+def get_artifact_analysis(artifact_id):
+    """Get analysis data for a specific artifact"""
+    artifact = next((a for a in ARTIFACTS_STORE if a["id"] == artifact_id or a["name"] == artifact_id), None)
+    
+    if not artifact:
+        return jsonify({"error": "Artifact not found"}), 404
+    
+    # If analysis exists, return it
+    if "analysis" in artifact:
+        return jsonify({
+            "artifact_id": artifact["id"],
+            "artifact_name": artifact["name"],
+            "analysis": artifact["analysis"],
+            "source_motions": artifact["metadata"]["source_motions"],
+            "blend_weight": artifact["metadata"]["blend_weight"]
+        })
+    
+    # If no analysis exists, generate it on-the-fly
+    motion_hash = artifact["metadata"].get("motion_hash", 12345)
+    frames = artifact["metadata"].get("frames", 120)
+    duration = artifact["metadata"].get("duration", 4.0)
+    weight = artifact["metadata"].get("blend_weight", 0.5)
+    
+    analysis_data = generate_blend_analysis(motion_hash, frames, duration, weight)
+    
+    # Store analysis in artifact for future requests
+    artifact["analysis"] = analysis_data
+    artifact["metadata"]["quality_score"] = analysis_data["metrics"]["quality_score"]
+    artifact["metadata"]["quality_category"] = analysis_data["metrics"]["quality_category"]
+    
+    return jsonify({
+        "artifact_id": artifact["id"],
+        "artifact_name": artifact["name"],
+        "analysis": analysis_data,
+        "source_motions": artifact["metadata"]["source_motions"],
+        "blend_weight": artifact["metadata"]["blend_weight"],
+        "generated": "on-demand"
+    })
+
 if __name__ == '__main__':
-    print(f"🚀 Starting MotionBlendAI Elasticsearch API server...")
-    print(f"Elasticsearch available: {es_available}")
-    print(f"Mock motions loaded: {len(MOCK_MOTIONS)}")
-    print(f"Index name: {ES_INDEX_NAME}")
+    logger.info("=" * 80)
+    logger.info("🚀 Starting MotionBlendAI Elasticsearch API server...")
+    logger.info("=" * 80)
     
-    # Initialize Elasticsearch connection when starting
-    initialize_elasticsearch()
-    
-    if es_available:
-        print("✅ Connected to Elasticsearch - using real search")
-    else:
-        print("⚠️  Using mock data for development")
+    with timer_context("Server initialization"):
+        # Log environment configuration
+        logger.info(f"🔧 DEBUG_MODE: {DEBUG_MODE}")
+        logger.info(f"🔌 Elasticsearch available: {es_available}")
+        logger.info(f"📊 Mock motions loaded: {len(MOCK_MOTIONS)}")
+        logger.info(f"📇 Index name: {ES_INDEX_NAME}")
+        
+        # Skip Elasticsearch initialization in DEBUG mode for faster startup
+        # ES will be initialized lazily on first search request if needed
+        if DEBUG_MODE:
+            logger.info("⚡ DEBUG_MODE: Skipping Elasticsearch initialization for fast startup")
+            logger.info("   → Elasticsearch will connect lazily on first search request")
+        else:
+            # Initialize Elasticsearch connection when starting in production
+            with timer_context("Initialize Elasticsearch"):
+                initialize_elasticsearch()
+        
+        if es_available and not DEBUG_MODE:
+            logger.info("✅ Connected to Elasticsearch - using real search")
+        else:
+            logger.warning("⚠️  Using mock data for development")
+        
+        # Get runtime configuration
+        import os
+        host = os.getenv('HOST', '0.0.0.0')
+        port = int(os.getenv('PORT', 5000))
+        debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+        
+        logger.info(f"📡 Server configuration: {host}:{port} (debug={debug})")
+        logger.info("=" * 80)
     
     # Run the Flask app (use 0.0.0.0 for Docker)
-    import os
-    host = os.getenv('HOST', '0.0.0.0')
-    port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
-    
-    print(f"📡 Server starting on {host}:{port}")
     app.run(debug=debug, host=host, port=port)

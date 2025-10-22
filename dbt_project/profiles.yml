@@ -1,0 +1,26 @@
+# dbt profiles configuration
+# Copy to ~/.dbt/profiles.yml or use --profiles-dir flag
+
+motionblend:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: motionblend-ai
+      dataset: RAW_DEV
+      threads: 4
+      timeout_seconds: 300
+      location: US
+      priority: interactive
+      
+    prod:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GCP_PROJECT') }}"
+      dataset: RAW
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      threads: 8
+      timeout_seconds: 600
+      location: US
+      priority: batch

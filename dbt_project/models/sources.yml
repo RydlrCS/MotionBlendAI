@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    database: motionblend-ai
+    schema: RAW_DEV
+    tables:
+      - name: seed_motions
+        description: Raw seed motion files from GCS
+      - name: build_motions
+        description: Raw build motion files from GCS
+      - name: blend_snn
+        description: Raw blend motion files (Smooth Neural Network)

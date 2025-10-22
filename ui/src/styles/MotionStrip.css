@@ -1,0 +1,229 @@
+/* MotionStrip.css - Styles for motion strip visualization */
+
+.motion-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  background: #fafafa;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.motion-strip-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.motion-strip-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.motion-strip-info {
+  font-size: 12px;
+  color: #666;
+  font-family: monospace;
+}
+
+.motion-strip-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.frame-grid {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #ccc #f0f0f0;
+}
+
+.frame-grid::-webkit-scrollbar {
+  height: 8px;
+}
+
+.frame-grid::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.frame-grid::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 4px;
+}
+
+.frame-grid::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.frame-thumbnail {
+  position: relative;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  background-color: #fff;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.frame-thumbnail:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  border-color: #0066cc;
+}
+
+.frame-thumbnail:focus {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+}
+
+.frame-thumbnail.selected {
+  border: 2px solid #0066cc;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.2);
+}
+
+.frame-thumbnail.highlighted {
+  background-color: #fff3cd;
+  border-color: #ffc107;
+}
+
+.frame-thumbnail.hovered {
+  border-color: #0066cc;
+  box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+}
+
+.frame-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.frame-number {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: #fff;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: bold;
+  font-family: monospace;
+  pointer-events: none;
+  user-select: none;
+}
+
+.frame-segment-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.frame-tooltip {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.9);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  animation: tooltip-fade-in 0.15s ease;
+}
+
+.frame-tooltip div {
+  margin: 2px 0;
+}
+
+.frame-tooltip strong {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+@keyframes tooltip-fade-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -100%) translateY(0);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .motion-strip {
+    padding: 12px;
+  }
+
+  .motion-strip-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .motion-strip-title {
+    font-size: 14px;
+  }
+
+  .motion-strip-info {
+    font-size: 11px;
+  }
+
+  .frame-grid {
+    padding: 4px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .frame-thumbnail {
+    border-width: 2px;
+  }
+
+  .frame-thumbnail:hover,
+  .frame-thumbnail:focus {
+    border-width: 3px;
+  }
+
+  .frame-tooltip {
+    background-color: #000;
+    border: 2px solid #fff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .frame-thumbnail,
+  .frame-tooltip {
+    transition: none;
+    animation: none;
+  }
+
+  .frame-thumbnail:hover {
+    transform: none;
+  }
+}

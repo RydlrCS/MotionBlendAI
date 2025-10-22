@@ -1,0 +1,37 @@
+name: 'motionblend'
+version: '1.0.0'
+config-version: 2
+
+profile: 'motionblend'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  motionblend:
+    staging:
+      +materialized: view
+      +schema: staging
+    features:
+      +materialized: table
+      +schema: features
+      +partition_by:
+        field: created_at
+        data_type: timestamp
+    marts:
+      +materialized: table
+      +schema: marts
+
+vars:
+  max_frame_lookback: 5
+  velocity_threshold: 2.0
+  acceleration_threshold: 1.0
