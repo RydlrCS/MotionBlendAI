@@ -4,9 +4,9 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/motionblend-api:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/moverse-api:$COMMIT_SHA'
       - '-t'
-      - 'gcr.io/$PROJECT_ID/motionblend-api:latest'
+      - 'gcr.io/$PROJECT_ID/moverse-api:latest'
       - '-f'
       - 'Dockerfile.api'
       - '.'
@@ -15,12 +15,12 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/motionblend-api:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/moverse-api:$COMMIT_SHA'
 
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
-      - 'gcr.io/$PROJECT_ID/motionblend-api:latest'
+      - 'gcr.io/$PROJECT_ID/moverse-api:latest'
 
   # Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -28,9 +28,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'motionblend-api'
+      - 'moverse-api'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/motionblend-api:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/moverse-api:$COMMIT_SHA'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -48,8 +48,8 @@ steps:
       - '300'
 
 images:
-  - 'gcr.io/$PROJECT_ID/motionblend-api:$COMMIT_SHA'
-  - 'gcr.io/$PROJECT_ID/motionblend-api:latest'
+  - 'gcr.io/$PROJECT_ID/moverse-api:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/moverse-api:latest'
 
 options:
   machineType: 'N1_HIGHCPU_8'
