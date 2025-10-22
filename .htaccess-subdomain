@@ -1,0 +1,23 @@
+# .htaccess for moverse.rydlr.com subdomain
+# Place this in /home/rydlr/domains/moverse.rydlr.com/public_html/.htaccess
+
+RewriteEngine On
+
+# Proxy ALL requests to Python API server on port 8080
+RewriteRule ^(.*)$ http://localhost:8080/$1 [P,L]
+
+# CORS Headers for API responses
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "*"
+    Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type, Authorization, X-Requested-With"
+    Header always set Access-Control-Max-Age "3600"
+</IfModule>
+
+# Handle OPTIONS preflight requests
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ - [R=200,L]
+
+# Allow access to this directory
+Options -Indexes +FollowSymLinks
+Require all granted
