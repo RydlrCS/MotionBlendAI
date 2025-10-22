@@ -1,0 +1,27 @@
+[Unit]
+Description=MotionBlend AI API Server
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=rydlr
+Group=rydlr
+WorkingDirectory=/home/rydlr/domains/moverse.rydlr.com/motionblend-api
+Environment=PATH=/home/rydlr/.venv/motionblend/bin
+Environment=PYTHONPATH=/home/rydlr/domains/moverse.rydlr.com/motionblend-api
+Environment=GCS_BUCKET=motionblend-mocap
+Environment=BQ_PROJECT=motionblend-ai
+Environment=BQ_DATASET=RAW_DEV
+Environment=ELASTICSEARCH_URL=https://elasticsearch-motionblend-ba986d.es.us-central1.gcp.elastic.cloud
+Environment=ES_API_KEY=V2VfQ0RKb0JMZW14WHRBTENhYWI6MW93UjJrZ2s1ZEVWcXdUdW1CVENEUQ==
+Environment=ES_INDEX=mb_blends_v1
+ExecStart=/home/rydlr/.venv/motionblend/bin/gunicorn --bind 127.0.0.1:8080 --workers 2 --threads 4 api_server:app
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=moverse-api
+
+[Install]
+WantedBy=multi-user.target
