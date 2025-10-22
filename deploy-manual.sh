@@ -59,8 +59,8 @@ mkdir -p assets
 
 # Download UI files
 wget -q -O index.html https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
-wget -q -O assets/index-5dea55ab.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-5dea55ab.css
-wget -q -O assets/index-ac34afc1.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-ac34afc1.js
+wget -q -O assets/index-08f65cc5.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css
+wget -q -O assets/index-0d9f8f93.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js
 
 print_status "UI deployment completed"
 

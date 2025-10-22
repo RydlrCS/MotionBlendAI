@@ -77,8 +77,8 @@ echo "🎨 Setting up UI files..."
 cd /home/rydlr/domains/moverse.rydlr.com/public_html
 
 wget -q https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
-wget -q https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-5dea55ab.css -O assets/
-wget -q https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-ac34afc1.js -O assets/
+wget -q https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css -O assets/
+wget -q https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js -O assets/
 print_status "UI files downloaded"
 
 # Setup Apache configuration

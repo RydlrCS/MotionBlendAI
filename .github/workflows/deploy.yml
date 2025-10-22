@@ -56,8 +56,8 @@ EOF"
 
         # Download UI files
         ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/index.html https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html"
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/assets/index-5dea55ab.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-5dea55ab.css"
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/assets/index-ac34afc1.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-ac34afc1.js"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/assets/index-08f65cc5.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/assets/index-0d9f8f93.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js"
 
         echo "✅ UI deployment completed"
 

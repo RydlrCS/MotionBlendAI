@@ -9,7 +9,7 @@ import MotionList from './components/MotionList'
 import BlendControls from './components/BlendControls'
 import ArtifactsList from './components/ArtifactsList'
 import BlendMixer from './components/BlendMixer'
-import {getMotions, getArtifactsManifest, startBlend} from './client'
+import {getMotions, getArtifactsManifest, startBlend, getVersion} from './client'
 import './styles/ElasticSearch.css'
 import './styles/FileControlPanel.css'
 
@@ -29,6 +29,18 @@ export default function App(){
   
   // Navigation state
   const [view, setView] = useState<'mixer'|'artifacts'>('mixer')
+
+  // Version information state
+  const [versionInfo, setVersionInfo] = useState<any>(null)
+
+  // Load version information
+  useEffect(()=>{
+    let mounted = true
+    getVersion().then(data=>{
+      if(mounted) setVersionInfo(data)
+    }).catch(()=>{})
+    return ()=>{ mounted=false }
+  },[])
 
   // Load available motions from API
   useEffect(()=>{
@@ -89,7 +101,29 @@ export default function App(){
     <div className="app">
       {/* Professional header with app title */}
       <header className="header">
-        MotionBlend AI - OBS Style Mixer
+        <div className="header-content">
+          <h1>MotionBlend AI - OBS Style Mixer</h1>
+          {versionInfo && (
+            <div className="version-info">
+              <span className="version-badge">
+                UI v{versionInfo.ui_version} | API v{versionInfo.api_version}
+              </span>
+              <span className="environment-badge" data-env={versionInfo.environment}>
+                {versionInfo.environment}
+              </span>
+              {versionInfo.ui_build_date && (
+                <span className="build-date">
+                  UI Built: {versionInfo.ui_build_date}
+                </span>
+              )}
+              {versionInfo.git_commit && versionInfo.git_commit !== 'unknown' && (
+                <span className="git-commit">
+                  {versionInfo.git_commit}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
       </header>
       
       {/* Tab navigation for different views */}

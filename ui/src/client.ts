@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { VERSION_INFO } from './version'
 
 // Use environment variable or fallback to production URL
 const API_BASE = import.meta.env.VITE_API_URL || 'https://moverse.rydlr.com';
@@ -115,5 +116,34 @@ export async function searchMotions(query: SearchQuery): Promise<any[]> {
         similarity_score: 0.92
       }
     ]
+  }
+}
+
+// Version information
+export async function getVersion(){
+  try {
+    const res = await axios.get(`${API_BASE}/version`)
+    const apiVersion = res.data
+
+    // Merge local UI version with API version
+    return {
+      ...apiVersion,
+      ui_version: VERSION_INFO.ui_version,
+      ui_build_date: VERSION_INFO.build_date,
+      ui_git_commit: VERSION_INFO.git_commit,
+      ui_build_timestamp: VERSION_INFO.build_timestamp
+    }
+  } catch (error) {
+    console.error('Failed to fetch version:', error)
+    // Return local version info as fallback
+    return {
+      api_version: "unknown",
+      ui_version: VERSION_INFO.ui_version,
+      build_date: VERSION_INFO.build_date,
+      git_commit: VERSION_INFO.git_commit,
+      environment: VERSION_INFO.environment,
+      server: "unknown",
+      ui_build_timestamp: VERSION_INFO.build_timestamp
+    }
   }
 }

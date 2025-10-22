@@ -53,7 +53,23 @@ MOCK_MOTIONS = [
             "frames": 75,
             "fps": 30,
             "joints": 24,
-            "file_format": "BVH"
+            "file_format": "BVH",
+            "tags": ["locomotion", "basic", "forward"],
+            "connectable_to": ["seed_walk_002", "seed_run_001", "seed_jump_001"]
+        }
+    },
+    {
+        "id": "seed_walk_002",
+        "name": "Walking Backward",
+        "category": "seed",
+        "metadata": {
+            "duration": 2.5,
+            "frames": 75,
+            "fps": 30,
+            "joints": 24,
+            "file_format": "BVH",
+            "tags": ["locomotion", "basic", "backward"],
+            "connectable_to": ["seed_walk_001", "seed_run_002", "seed_idle_001"]
         }
     },
     {
@@ -65,7 +81,23 @@ MOCK_MOTIONS = [
             "frames": 54,
             "fps": 30,
             "joints": 24,
-            "file_format": "BVH"
+            "file_format": "BVH",
+            "tags": ["locomotion", "fast", "sprint"],
+            "connectable_to": ["seed_walk_001", "seed_jump_001", "seed_run_002"]
+        }
+    },
+    {
+        "id": "seed_run_002",
+        "name": "Jogging",
+        "category": "seed",
+        "metadata": {
+            "duration": 3.0,
+            "frames": 90,
+            "fps": 30,
+            "joints": 24,
+            "file_format": "BVH",
+            "tags": ["locomotion", "moderate", "jog"],
+            "connectable_to": ["seed_walk_002", "seed_run_001", "seed_idle_001"]
         }
     },
     {
@@ -77,13 +109,100 @@ MOCK_MOTIONS = [
             "frames": 36,
             "fps": 30,
             "joints": 24,
-            "file_format": "BVH"
+            "file_format": "BVH",
+            "tags": ["action", "vertical", "landing"],
+            "connectable_to": ["seed_walk_001", "seed_run_001", "seed_idle_001"]
+        }
+    },
+    {
+        "id": "seed_jump_002",
+        "name": "High Jump",
+        "category": "seed",
+        "metadata": {
+            "duration": 1.5,
+            "frames": 45,
+            "fps": 30,
+            "joints": 24,
+            "file_format": "BVH",
+            "tags": ["action", "vertical", "high"],
+            "connectable_to": ["seed_jump_001", "seed_run_001", "seed_idle_001"]
+        }
+    },
+    {
+        "id": "seed_idle_001",
+        "name": "Standing Idle",
+        "category": "seed",
+        "metadata": {
+            "duration": 4.0,
+            "frames": 120,
+            "fps": 30,
+            "joints": 24,
+            "file_format": "BVH",
+            "tags": ["pose", "static", "idle"],
+            "connectable_to": ["seed_walk_001", "seed_walk_002", "seed_jump_001"]
+        }
+    },
+    {
+        "id": "seed_idle_002",
+        "name": "Crouching",
+        "category": "seed",
+        "metadata": {
+            "duration": 2.0,
+            "frames": 60,
+            "fps": 30,
+            "joints": 24,
+            "file_format": "BVH",
+            "tags": ["pose", "static", "crouch"],
+            "connectable_to": ["seed_idle_001", "seed_walk_001", "seed_jump_002"]
         }
     }
 ]
 
 # In-memory artifacts store (replace with database in production)
-ARTIFACTS_STORE = []
+ARTIFACTS_STORE = [
+    {
+        "id": "blend_walkrun_001",
+        "name": "Walking to Running Transition",
+        "type": "blend",
+        "status": "completed",
+        "created_at": "2025-10-22T10:00:00Z",
+        "metadata": {
+            "source_motions": ["seed_walk_001", "seed_run_001"],
+            "blend_weight": 0.6,
+            "frames": 95,
+            "duration": 3.17,
+            "quality_score": 0.87
+        }
+    },
+    {
+        "id": "blend_jumpidle_001",
+        "name": "Jump to Idle Pose",
+        "type": "blend",
+        "status": "completed",
+        "created_at": "2025-10-22T11:15:00Z",
+        "metadata": {
+            "source_motions": ["seed_jump_001", "seed_idle_001"],
+            "blend_weight": 0.4,
+            "frames": 78,
+            "duration": 2.6,
+            "quality_score": 0.82
+        }
+    },
+    {
+        "id": "blend_runjump_001",
+        "name": "Running to Jump",
+        "type": "blend",
+        "status": "completed",
+        "created_at": "2025-10-22T12:30:00Z",
+        "metadata": {
+            "source_motions": ["seed_run_001", "seed_jump_002"],
+            "blend_weight": 0.7,
+            "frames": 67,
+            "duration": 2.23,
+            "quality_score": 0.91
+        }
+    }
+]
 
 
 def get_gcs_client():
@@ -129,6 +248,27 @@ def get_elasticsearch_client():
         except Exception as e:
             logger.warning(f"⚠️ Elasticsearch unavailable: {e}")
     return es_client
+
+
+@app.route('/version', methods=['GET', 'OPTIONS'])
+def version():
+    """Version information endpoint"""
+    if request.method == 'OPTIONS':
+        return '', 204
+    
+    return jsonify({
+        "api_version": "1.0.0",
+        "ui_version": "1.0.0",
+        "build_date": "2025-10-22",
+        "git_commit": "f1b6f7ab",
+        "environment": "production",
+        "server": "moverse.rydlr.com",
+        "services": {
+            "elasticsearch": ES_URL,
+            "bigquery_project": BQ_PROJECT,
+            "gcs_bucket": GCS_BUCKET
+        }
+    })
 
 
 # ============================================================================
@@ -527,26 +667,50 @@ def get_artifact_analysis(artifact_id):
                 logger.warning(f"BigQuery query failed: {e}")
         
         # Fallback to mock data
+        # Generate varied metrics based on artifact_id for demonstration
+        import random
+        random.seed(hash(artifact_id) % 1000)  # Deterministic but varied
+        
+        quality_score = round(random.uniform(0.6, 0.95), 2)
+        if quality_score >= 0.85:
+            category = "excellent"
+        elif quality_score >= 0.75:
+            category = "good"
+        elif quality_score >= 0.65:
+            category = "fair"
+        else:
+            category = "poor"
+        
         return jsonify({
             "id": artifact_id,
             "quality": {
-                "score": 0.85,
-                "category": "good"
+                "score": quality_score,
+                "category": category
             },
             "metrics": {
-                "fid": 12.5,
-                "coverage": 0.78,
-                "global_diversity": 0.65,
-                "local_diversity": 0.58,
-                "l2_velocity_mean": 1.2,
-                "l2_acceleration_mean": 0.8,
-                "transition_smoothness": 0.82
+                "fid": round(random.uniform(8.0, 25.0), 1),
+                "coverage": round(random.uniform(0.5, 0.9), 2),
+                "global_diversity": round(random.uniform(0.4, 0.8), 2),
+                "local_diversity": round(random.uniform(0.3, 0.7), 2),
+                "l2_velocity_mean": round(random.uniform(0.8, 2.5), 1),
+                "l2_acceleration_mean": round(random.uniform(0.5, 1.8), 1),
+                "transition_smoothness": round(random.uniform(0.6, 0.9), 2),
+                "joint_coherence": round(random.uniform(0.7, 0.95), 2),
+                "temporal_consistency": round(random.uniform(0.75, 0.95), 2),
+                "pose_realism": round(random.uniform(0.6, 0.9), 2)
             },
             "issues": {
-                "velocity_spike": False,
-                "rough_transition": False,
-                "distribution_mismatch": False
-            }
+                "velocity_spike": random.choice([True, False]),
+                "rough_transition": random.choice([True, False]),
+                "distribution_mismatch": random.choice([True, False]),
+                "joint_discontinuity": random.choice([True, False]),
+                "temporal_artifacts": random.choice([True, False])
+            },
+            "recommendations": [
+                "Consider adjusting blend weights for smoother transitions" if random.random() > 0.5 else None,
+                "Increase training data diversity" if quality_score < 0.8 else None,
+                "Fine-tune temporal alignment" if random.random() > 0.7 else None
+            ]
         })
         
     except Exception as e:

@@ -46,6 +46,65 @@ body {
   border-bottom: 2px solid var(--border-color);
 }
 
+.header-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-content h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.version-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.version-badge {
+  background: var(--secondary-bg);
+  padding: 4px 8px;
+  border-radius: var(--border-radius);
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+.environment-badge {
+  padding: 4px 8px;
+  border-radius: var(--border-radius);
+  font-weight: 500;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.environment-badge[data-env="production"] {
+  background: var(--success);
+  color: var(--primary-bg);
+}
+
+.environment-badge[data-env="development"] {
+  background: var(--warning);
+  color: var(--primary-bg);
+}
+
+.environment-badge[data-env="staging"] {
+  background: var(--highlight);
+  color: var(--primary-bg);
+}
+
+.build-date {
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
 .tabs {
   display: flex;
   margin-bottom: var(--gap);

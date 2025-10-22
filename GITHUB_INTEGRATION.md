@@ -22,8 +22,8 @@ https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/.htaccess-subdomain
 ### UI Files (Built for Production)
 ```
 https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
-https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-5dea55ab.css
-https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-ac34afc1.js
+https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css
+https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js
 ```
 
 ### Deployment Guides
