@@ -33,7 +33,8 @@ CORS(app, resources={
 GCS_BUCKET = os.environ.get('GCS_BUCKET', 'motionblend-mocap')
 BQ_PROJECT = os.environ.get('BQ_PROJECT', 'motionblend-ai')
 BQ_DATASET = os.environ.get('BQ_DATASET', 'RAW_DEV')
-ES_URL = os.environ.get('ELASTICSEARCH_URL', 'http://localhost:9200')
+ES_URL = os.environ.get('ELASTICSEARCH_URL', 'https://my-elasticsearch-project-ba986d.es.us-central1.gcp.elastic.cloud:443')
+ES_API_KEY = os.environ.get('ES_API_KEY', 'V2VfQ0RKb0JMZW14WHRBTENhYWI6MW93UjJrZ2s1ZEVWcXdUdW1CVENEUQ==')
 ES_INDEX = os.environ.get('ES_INDEX', 'mb_blends_v1')
 
 # Global state for lazy initialization
@@ -117,9 +118,14 @@ def get_elasticsearch_client():
     if es_client is None:
         try:
             from elasticsearch import Elasticsearch
-            es_client = Elasticsearch([ES_URL])
+            # Use API key authentication for Elastic Cloud
+            es_client = Elasticsearch(
+                ES_URL,
+                api_key=ES_API_KEY,
+                verify_certs=True
+            )
             es_client.info()
-            logger.info("✅ Elasticsearch client initialized")
+            logger.info("✅ Elasticsearch client initialized (Elastic Cloud)")
         except Exception as e:
             logger.warning(f"⚠️ Elasticsearch unavailable: {e}")
     return es_client
