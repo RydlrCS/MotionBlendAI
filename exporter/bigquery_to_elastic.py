@@ -18,10 +18,11 @@ from connector.retry_util import retry_with_backoff
 
 logger = get_logger(__name__)
 
-# Elasticsearch index template
+# Elasticsearch index template with comprehensive quality metrics
 INDEX_TEMPLATE = {
     "mappings": {
         "properties": {
+            # Core blend identifiers
             "blend_id": {"type": "keyword"},
             "left_motion_id": {"type": "keyword"},
             "right_motion_id": {"type": "keyword"},
@@ -29,29 +30,59 @@ INDEX_TEMPLATE = {
             "transition_start_frame": {"type": "integer"},
             "transition_end_frame": {"type": "integer"},
             "method": {"type": "keyword"},
-            # Quality metrics
+            
+            # Distribution quality metrics
             "fid": {"type": "float"},
             "coverage": {"type": "float"},
-            "gdiv": {"type": "float"},
-            "ldiv": {"type": "float"},
-            "inter_div": {"type": "float"},
-            "intra_div": {"type": "float"},
-            # Velocity/acceleration
+            
+            # Diversity metrics
+            "global_diversity": {"type": "float"},
+            "local_diversity": {"type": "float"},
+            "inter_diversity": {"type": "float"},
+            "intra_diversity": {"type": "float"},
+            
+            # L2 Velocity metrics (smoothness)
             "l2_velocity_mean": {"type": "float"},
+            "l2_velocity_std": {"type": "float"},
+            "l2_velocity_max": {"type": "float"},
+            "l2_velocity_transition": {"type": "float"},
+            
+            # L2 Acceleration metrics (higher-order smoothness)
             "l2_acceleration_mean": {"type": "float"},
+            "l2_acceleration_std": {"type": "float"},
+            "l2_acceleration_max": {"type": "float"},
+            "l2_acceleration_transition": {"type": "float"},
+            
+            # Transition quality metrics
             "transition_smoothness": {"type": "float"},
-            # Quality derived
+            "velocity_ratio": {"type": "float"},
+            "acceleration_ratio": {"type": "float"},
+            "smoothness_component": {"type": "float"},
+            "diversity_component": {"type": "float"},
+            "fid_coverage_component": {"type": "float"},
+            
+            # Overall quality assessment
             "quality_score": {"type": "float"},
             "quality_category": {"type": "keyword"},
+            
+            # Issue flags
+            "has_velocity_spike": {"type": "boolean"},
+            "has_rough_transition": {"type": "boolean"},
+            "has_distribution_mismatch": {"type": "boolean"},
+            
             # Timestamps
             "created_at": {"type": "date"},
+            "updated_at": {"type": "date"},
             "computed_at": {"type": "date"}
         }
     },
     "settings": {
         "number_of_shards": 1,
-        "number_of_replicas": 0,
-        "refresh_interval": "30s"
+        "number_of_replicas": 1,
+        "refresh_interval": "30s",
+        "index": {
+            "max_result_window": 10000
+        }
     }
 }
 
@@ -105,18 +136,49 @@ def query_bigquery(
                 transition_start_frame,
                 transition_end_frame,
                 method,
+                
+                -- Distribution metrics
                 fid,
                 coverage,
-                gdiv,
-                ldiv,
-                inter_div,
-                intra_div,
+                
+                -- Diversity metrics
+                global_diversity,
+                local_diversity,
+                inter_diversity,
+                intra_diversity,
+                
+                -- L2 Velocity metrics
                 l2_velocity_mean,
+                l2_velocity_std,
+                l2_velocity_max,
+                l2_velocity_transition,
+                
+                -- L2 Acceleration metrics
                 l2_acceleration_mean,
+                l2_acceleration_std,
+                l2_acceleration_max,
+                l2_acceleration_transition,
+                
+                -- Transition quality
                 transition_smoothness,
+                velocity_ratio,
+                acceleration_ratio,
+                smoothness_component,
+                diversity_component,
+                fid_coverage_component,
+                
+                -- Overall quality
                 quality_score,
                 quality_category,
-                TIMESTAMP_SECONDS(created_at) as created_at,
+                
+                -- Issue flags
+                has_velocity_spike,
+                has_rough_transition,
+                has_distribution_mismatch,
+                
+                -- Timestamps
+                created_at,
+                updated_at,
                 computed_at
             FROM `{project}.{dataset}.{table}`
         """
