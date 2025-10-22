@@ -1,8 +1,8 @@
 import axios from 'axios'
 
-// Use environment variables with fallback to production server
-const API_BASE = import.meta.env?.VITE_API_URL || 'https://moverse.rydlr.com'
-const ELASTIC_API_BASE = import.meta.env?.VITE_API_URL || 'https://moverse.rydlr.com'
+// Use environment variable or fallback to production URL
+const API_BASE = import.meta.env.VITE_API_URL || 'https://www.rydlr.com/motionblend';
+const ELASTIC_API_BASE = import.meta.env.VITE_ELASTIC_API_URL || 'https://www.rydlr.com/motionblend';
 
 // Search interface
 interface SearchQuery {
