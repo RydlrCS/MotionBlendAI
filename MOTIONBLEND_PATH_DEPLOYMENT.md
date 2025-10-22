@@ -65,7 +65,7 @@ BQ_PROJECT=your-gcp-project-id
 BQ_DATASET=RAW_DEV
 
 # Elasticsearch (Elastic Cloud)
-ELASTICSEARCH_URL=https://my-elasticsearch-project-ba986d.es.us-central1.gcp.elastic.cloud:443
+ELASTICSEARCH_URL=https://elasticsearch-motionblend-ba986d.es.us-central1.gcp.elastic.cloud
 ES_API_KEY=V2VfQ0RKb0JMZW14WHRBTENhYWI6MW93UjJrZ2s1ZEVWcXdUdW1CVENEUQ==
 ES_INDEX=mb_blends_v1
 

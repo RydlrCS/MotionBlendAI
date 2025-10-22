@@ -135,6 +135,25 @@ wget https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/setup.sh
 chmod +x setup.sh
 ./setup.sh
 
+# Create environment file
+cat > /home/rydlr/domains/moverse.rydlr.com/motionblend-api/.env << 'EOF'
+# Google Cloud Storage
+GCS_BUCKET=motionblend-mocap
+
+# BigQuery
+BQ_PROJECT=your-gcp-project-id
+BQ_DATASET=RAW_DEV
+
+# Elasticsearch (Elastic Cloud)
+ELASTICSEARCH_URL=https://elasticsearch-motionblend-ba986d.es.us-central1.gcp.elastic.cloud
+ES_API_KEY=V2VfQ0RKb0JMZW14WHRBTENhYWI6MW93UjJrZ2s1ZEVWcXdUdW1CVENEUQ==
+ES_INDEX=mb_blends_v1
+
+# Flask
+FLASK_ENV=production
+PORT=8080
+EOF
+
 # Create .htaccess in public_html
 cat > /home/rydlr/domains/moverse.rydlr.com/public_html/.htaccess << 'EOF'
 RewriteEngine On

@@ -33,7 +33,7 @@ CORS(app, resources={
 GCS_BUCKET = os.environ.get('GCS_BUCKET', 'motionblend-mocap')
 BQ_PROJECT = os.environ.get('BQ_PROJECT', 'motionblend-ai')
 BQ_DATASET = os.environ.get('BQ_DATASET', 'RAW_DEV')
-ES_URL = os.environ.get('ELASTICSEARCH_URL', 'https://my-elasticsearch-project-ba986d.es.us-central1.gcp.elastic.cloud:443')
+ES_URL = os.environ.get('ELASTICSEARCH_URL', 'https://elasticsearch-motionblend-ba986d.es.us-central1.gcp.elastic.cloud')
 ES_API_KEY = os.environ.get('ES_API_KEY', 'V2VfQ0RKb0JMZW14WHRBTENhYWI6MW93UjJrZ2s1ZEVWcXdUdW1CVENEUQ==')
 ES_INDEX = os.environ.get('ES_INDEX', 'mb_blends_v1')
 
