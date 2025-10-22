@@ -10,6 +10,7 @@ https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/api_server.py
 https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/requirements-api.txt
 https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/setup.sh
 https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/deploy-manual.sh
+https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/deploy-ftp.sh
 https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/moverse-api.service
 ```
 
@@ -207,36 +208,78 @@ echo "Deployment completed"
    - **Events:** Just the `push` event
    - **Active:** ✅
 
-### Option 3: Manual wget Deployment
+### Option 3: FTP Deployment
 
-For simple manual updates, create a deployment script:
+For FTP-based deployment (useful when SSH access is not available):
+
+#### FTP Deployment Script
 
 ```bash
 #!/bin/bash
-# deploy-manual.sh
+# deploy-ftp.sh - FTP-based deployment
 
-echo "Manual deployment from GitHub..."
+# FTP Configuration (configure these)
+FTP_HOST="rydlr-ftp.moverse"
+FTP_USER="rydlr-ftp"
+FTP_PASS="your-ftp-password"
 
-# API Files
-cd /home/rydlr/domains/moverse.rydlr.com/motionblend-api
-wget -O api_server.py https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/api_server.py
-wget -O requirements-api.txt https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/requirements-api.txt
+# Download latest files
+wget -q -O api_server.py https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/api_server.py
+wget -q -O requirements-api.txt https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/requirements-api.txt
+wget -q -O index.html https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
+wget -q -O index-08f65cc5.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css
+wget -q -O index-0d9f8f93.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js
+wget -q -O .htaccess https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/.htaccess-subdomain
 
-# UI Files
-cd ../public_html
-wget -O index.html https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
-wget -O assets/index-5dea55ab.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-5dea55ab.css
-wget -O assets/index-ac34afc1.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-ac34afc1.js
+# Create FTP batch file
+cat > ftp_upload.txt << EOF
+open $FTP_HOST
+user $FTP_USER $FTP_PASS
+binary
 
-# Config Files
-wget -O .htaccess https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/.htaccess-subdomain
+# Upload API files
+mkdir motionblend-api
+cd motionblend-api
+put api_server.py
+put requirements-api.txt
+cd ..
 
-# Restart services
-sudo systemctl restart moverse-api
-sudo systemctl reload apache2
+# Upload UI files
+cd public_html
+put index.html
+mkdir assets
+cd assets
+put index-08f65cc5.css
+put index-0d9f8f93.js
+cd ..
+put .htaccess
 
-echo "Deployment complete!"
+bye
+EOF
+
+# Execute FTP upload
+ftp -n < ftp_upload.txt
+
+# Cleanup
+rm ftp_upload.txt
+
+echo "FTP deployment completed!"
 ```
+
+#### Usage
+```bash
+# Download and run the FTP deployment script
+wget https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/deploy-ftp.sh
+chmod +x deploy-ftp.sh
+
+# Edit FTP credentials in the script
+nano deploy-ftp.sh
+
+# Run deployment
+./deploy-ftp.sh
+```
+
+**Note:** FTP deployment requires manual credential configuration and doesn't restart services automatically. Use this as a fallback when SSH is not available.
 
 ## GitHub Secrets Required
 
