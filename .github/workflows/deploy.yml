@@ -96,3 +96,101 @@ EOF"
         curl -f -s -I https://moverse.rydlr.com/ > /dev/null && echo "✅ UI accessibility check passed" || echo "❌ UI accessibility check failed"
 
         echo "🏁 Health checks completed"
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Deploy API Server
+      run: |
+        echo "🚀 Starting API deployment..."
+
+        # Create API directory
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /home/rydlr/domains/moverse.rydlr.com/motionblend-api"
+
+        # Download and deploy API files
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /home/rydlr/domains/moverse.rydlr.com/motionblend-api && wget -q -O api_server.py https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/api_server.py"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /home/rydlr/domains/moverse.rydlr.com/motionblend-api && wget -q -O requirements-api.txt https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/requirements-api.txt"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /home/rydlr/domains/moverse.rydlr.com/motionblend-api && wget -q -O setup.sh https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/setup.sh && chmod +x setup.sh"
+
+        # Create environment file
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cat > /home/rydlr/domains/moverse.rydlr.com/motionblend-api/.env << EOF
+GCS_BUCKET=motionblend-mocap
+BQ_PROJECT=${{ secrets.BQ_PROJECT }}
+BQ_DATASET=RAW_DEV
+ELASTICSEARCH_URL=https://elasticsearch-motionblend-ba986d.es.us-central1.gcp.elastic.cloud
+ES_API_KEY=${{ secrets.ES_API_KEY }}
+ES_INDEX=mb_blends_v1
+FLASK_ENV=production
+PORT=8080
+EOF"
+
+        # Setup Python environment (if needed)
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd /home/rydlr/domains/moverse.rydlr.com/motionblend-api && ./setup.sh"
+
+        echo "✅ API deployment completed"
+
+    - name: Deploy UI Files
+      run: |
+        echo "🎨 Deploying UI files..."
+
+        # Create assets directory
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "mkdir -p /home/rydlr/domains/moverse.rydlr.com/public_html/assets"
+
+        # Download UI files
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/index.html https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/assets/index-08f65cc5.css https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css"
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/assets/index-0d9f8f93.js https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js"
+
+        echo "✅ UI deployment completed"
+
+    - name: Deploy Apache Configuration
+      run: |
+        echo "⚙️ Updating Apache configuration..."
+
+        # Download .htaccess
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "wget -q -O /home/rydlr/domains/moverse.rydlr.com/public_html/.htaccess https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/.htaccess-subdomain"
+
+        echo "✅ Apache configuration updated"
+
+    - name: Restart Services
+      run: |
+        echo "🔄 Restarting services..."
+
+        # Restart API service
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "sudo systemctl restart moverse-api"
+
+        # Reload Apache
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "sudo systemctl reload apache2"
+
+        echo "✅ Services restarted"
+
+    - name: Health Check
+      run: |
+        echo "🏥 Running health checks..."
+
+        # Wait for services to start
+        sleep 15
+
+        # Test API health
+        ssh -o StrictHostKeyChecking=no ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "curl -f -s http://localhost:8080/health" && echo "✅ API health check passed" || echo "❌ API health check failed"
+
+        # Test UI accessibility
+        curl -f -s -I https://moverse.rydlr.com/ > /dev/null && echo "✅ UI accessibility check passed" || echo "❌ UI accessibility check failed"
+
+        echo "🏁 Health checks completed"
