@@ -285,11 +285,39 @@ nano deploy-ftp.sh
 
 For GitHub Actions, add these secrets to your repository:
 
-- `SSH_PRIVATE_KEY`: Your server's SSH private key
-- `SERVER_HOST`: Your server IP (102.219.23.35)
-- `SERVER_USER`: `rydlr`
-- `BQ_PROJECT`: Your BigQuery project ID
+- `SSH_PRIVATE_KEY`: Your server's SSH private key (generate with `ssh-keygen`)
+- `SERVER_HOST`: `rydlr.moverse` (your SSH hostname)
+- `SERVER_USER`: `rydlr` (your SSH username)
+- `BQ_PROJECT`: Your BigQuery project ID (`motionblend-ai`)
 - `ES_API_KEY`: Your Elasticsearch API key
+
+### Setting up SSH Access
+
+1. **Generate SSH Key Pair** (on your local machine):
+```bash
+ssh-keygen -t rsa -b 4096 -C "github-actions@rydlr.moverse"
+# Save as ~/.ssh/github_actions_rsa (don't use default name)
+```
+
+2. **Add Public Key to Server**:
+```bash
+# Copy public key to server
+ssh-copy-id -i ~/.ssh/github_actions_rsa.pub rydlr@rydlr.moverse
+
+# Or manually append to ~/.ssh/authorized_keys on server
+cat ~/.ssh/github_actions_rsa.pub >> ~/.ssh/authorized_keys
+```
+
+3. **Add Private Key to GitHub Secrets**:
+   - Go to your GitHub repository → Settings → Secrets and variables → Actions
+   - Add new secret named `SSH_PRIVATE_KEY`
+   - Paste the entire private key content (including `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END OPENSSH PRIVATE KEY-----`)
+
+4. **Test SSH Connection**:
+```bash
+ssh -T rydlr@rydlr.moverse
+# Should connect without password prompt
+```
 
 ## Testing Auto-Deployment
 

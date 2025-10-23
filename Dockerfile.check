@@ -1,0 +1,18 @@
+# Lightweight Dockerfile to verify COPY paths exist (no heavy installs)
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy requirements and project folders to validate paths
+COPY project/elastic_search/requirements.txt ./requirements_elastic.txt
+COPY project/ganimator/requirements.txt ./requirements_ganimator.txt
+COPY project/vertex_pipeline/requirements.txt ./requirements_vertex.txt
+
+COPY project/ ./project/
+COPY scripts/ ./scripts/
+
+# List the copied files to ensure they exist
+RUN echo "--- ls project/ ---" && ls -la project || true
+RUN echo "--- ls scripts/ ---" && ls -la scripts || true
+
+CMD ["/bin/sh", "-c", "echo COPY check complete"]

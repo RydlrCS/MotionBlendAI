@@ -38,16 +38,16 @@ echo "📁 Using temp directory: $TEMP_DIR"
 echo "📥 Downloading latest files..."
 
 # API files
-wget -q -O "$TEMP_DIR/api_server.py" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/api_server.py
-wget -q -O "$TEMP_DIR/requirements-api.txt" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/requirements-api.txt
+curl -s -o "$TEMP_DIR/api_server.py" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/api_server.py
+curl -s -o "$TEMP_DIR/requirements-api.txt" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/requirements-api.txt
 
 # UI files
-wget -q -O "$TEMP_DIR/index.html" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
-wget -q -O "$TEMP_DIR/index-08f65cc5.css" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css
-wget -q -O "$TEMP_DIR/index-0d9f8f93.js" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js
+curl -s -o "$TEMP_DIR/index.html" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/index.html
+curl -s -o "$TEMP_DIR/index-08f65cc5.css" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-08f65cc5.css
+curl -s -o "$TEMP_DIR/index-0d9f8f93.js" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/ui/dist/assets/index-0d9f8f93.js
 
 # Config files
-wget -q -O "$TEMP_DIR/.htaccess" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/.htaccess-subdomain
+curl -s -o "$TEMP_DIR/.htaccess" https://raw.githubusercontent.com/RydlrCS/MotionBlendAI/main/.htaccess-subdomain
 
 print_status "Files downloaded to temp directory"
 
@@ -79,7 +79,15 @@ bye
 EOF
 
 echo "🔄 Uploading files via FTP..."
-ftp -n < "$TEMP_DIR/ftp_upload.txt"
+# Upload API files
+curl -T "$TEMP_DIR/api_server.py" ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/motionblend-api/
+curl -T "$TEMP_DIR/requirements-api.txt" ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/motionblend-api/
+
+# Upload UI files
+curl -T "$TEMP_DIR/index.html" ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/public_html/
+curl -T "$TEMP_DIR/index-08f65cc5.css" ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/public_html/assets/
+curl -T "$TEMP_DIR/index-0d9f8f93.js" ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/public_html/assets/
+curl -T "$TEMP_DIR/.htaccess" ftp://$FTP_USER:$FTP_PASS@$FTP_HOST/public_html/
 
 if [ $? -eq 0 ]; then
     print_status "FTP upload completed successfully"
