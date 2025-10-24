@@ -13,6 +13,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 from pathlib import Path
 import hashlib
+import time
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,12 @@ BQ_DATASET = os.environ.get('BQ_DATASET', 'RAW_DEV')
 ES_URL = os.environ.get('ELASTICSEARCH_URL', 'https://elasticsearch-motionblend-ba986d.es.us-central1.gcp.elastic.cloud')
 ES_API_KEY = os.environ.get('ES_API_KEY', 'V2VfQ0RKb0JMZW14WHRBTENhYWI6MW93UjJrZ2s1ZEVWcXdUdW1CVENEUQ==')
 ES_INDEX = os.environ.get('ES_INDEX', 'mb_blends_v1')
+
+# Local demo motion directories (relative to repo root)
+BASE_DIR = Path(__file__).parent.resolve()
+LOCAL_SEED_DIR = BASE_DIR / 'project' / 'seed_motions'
+LOCAL_BUILD_DIR = BASE_DIR / 'build' / 'build_motions'
+LOCAL_BLEND_DIR = BASE_DIR / 'build' / 'blend_snn'
 
 # Global state for lazy initialization
 es_client = None
@@ -436,7 +443,24 @@ def create_blend():
                 "quality_score": 0.85  # Mock quality score
             }
         }
-        
+        # Write a small placeholder BVH file to the demo blend folder so the
+        # UI can download a file for the created blend. This is lightweight
+        # and demo-only behaviour.
+        try:
+            LOCAL_BLEND_DIR.mkdir(parents=True, exist_ok=True)
+            demo_filename = f"{artifact['id']}.bvh"
+            demo_path = LOCAL_BLEND_DIR / demo_filename
+            if not demo_path.exists():
+                with open(demo_path, 'w') as f:
+                    f.write(f"// Demo BVH for {artifact['id']}\n")
+                    f.write("HIERARCHY\n")
+                    f.write("ROOT Demo\n")
+            # Add download URL to artifact metadata
+            artifact['metadata']['file'] = demo_filename
+            artifact['metadata']['download_url'] = f"/files/blend_snn/{demo_filename}"
+        except Exception as e:
+            logger.warning(f"Could not write demo blend file: {e}")
+
         # Store artifact
         ARTIFACTS_STORE.append(artifact)
         
@@ -529,12 +553,46 @@ def get_artifacts_manifest():
                             "metadata": blob.metadata or {}
                         })
 
-                # If the GCS bucket exists but contains no .bvh blobs, fall
-                # back to the in-memory ARTIFACTS_STORE so the demo UI shows
-                # sample artifacts. This improves the developer/demo
-                # experience when the production bucket is empty.
-                if not artifacts and ARTIFACTS_STORE:
-                    logger.info("GCS returned no artifacts; falling back to in-memory store for manifest")
+                # Also scan local motion folders and merge results so the demo
+                # UI can show both cloud and local/demo artifacts.
+                def scan_local(dirpath: Path, category: str):
+                    if not dirpath.exists():
+                        return []
+                    found = []
+                    for p in sorted(dirpath.iterdir()):
+                        if p.is_file() and p.suffix.lower() in ['.bvh', '.fbx', '.trc', '.glb', '.npy']:
+                            stat = p.stat()
+                            found.append({
+                                "id": p.stem,
+                                "name": p.name,
+                                "created_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                                "size": stat.st_size,
+                                "category": category,
+                                "download_url": f"/files/{category}/{p.name}"
+                            })
+                    return found
+
+                local_artifacts = []
+                local_artifacts.extend(scan_local(LOCAL_SEED_DIR, 'seed_motions'))
+                local_artifacts.extend(scan_local(LOCAL_BUILD_DIR, 'build_motions'))
+                local_artifacts.extend(scan_local(LOCAL_BLEND_DIR, 'blend_snn'))
+
+                # Merge cloud artifacts and local artifacts, avoiding duplicates
+                combined = []
+                seen = set()
+                for a in artifacts:
+                    key = (a.get('id'), a.get('name'))
+                    seen.add(key)
+                    combined.append(a)
+                for a in local_artifacts:
+                    key = (a.get('id'), a.get('name'))
+                    if key in seen:
+                        continue
+                    combined.append(a)
+
+                if not combined and ARTIFACTS_STORE:
+                    # final fallback to in-memory store
+                    logger.info("No cloud/local artifacts; falling back to in-memory store for manifest")
                     return jsonify({
                         "artifacts": ARTIFACTS_STORE,
                         "total": len(ARTIFACTS_STORE),
@@ -542,8 +600,8 @@ def get_artifacts_manifest():
                     })
 
                 return jsonify({
-                    "artifacts": artifacts,
-                    "total": len(artifacts),
+                    "artifacts": combined,
+                    "total": len(combined),
                     "last_updated": datetime.now().isoformat()
                 })
                 
@@ -820,6 +878,35 @@ def index():
         },
         "documentation": "https://github.com/RydlrCS/MotionBlendAI"
     })
+
+
+@app.route('/files/<category>/<path:filename>', methods=['GET', 'OPTIONS'])
+def serve_file(category, filename):
+    """Serve demo motion files from local directories.
+
+    category must be one of: seed_motions, build_motions, blend_snn
+    This is intended for demo use only. In production, files should be
+    stored in GCS or a proper file server.
+    """
+    if request.method == 'OPTIONS':
+        return '', 204
+
+    try:
+        safe_name = Path(filename).name  # prevent path traversal
+        if category == 'seed_motions':
+            directory = str(LOCAL_SEED_DIR)
+        elif category == 'build_motions':
+            directory = str(LOCAL_BUILD_DIR)
+        elif category == 'blend_snn':
+            directory = str(LOCAL_BLEND_DIR)
+        else:
+            return jsonify({"error": "Unknown file category"}), 400
+
+        # send_from_directory will raise if file doesn't exist
+        return send_from_directory(directory, safe_name, as_attachment=True)
+    except Exception as e:
+        logger.warning(f"File serve error for {category}/{filename}: {e}")
+        return jsonify({"error": "File not found"}), 404
 
 
 # ============================================================================
