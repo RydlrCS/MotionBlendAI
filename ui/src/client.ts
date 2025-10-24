@@ -1,9 +1,9 @@
 import axios from 'axios'
 import { VERSION_INFO } from './version'
 
-// Use environment variable or fallback to production URL
-const API_BASE = import.meta.env.VITE_API_URL || 'https://moverse.rydlr.com';
-const ELASTIC_API_BASE = import.meta.env.VITE_ELASTIC_API_URL || 'https://moverse.rydlr.com';
+// Use environment variable or fallback to production URL (http, not https)
+const API_BASE = import.meta.env.VITE_API_URL || 'http://moverse.rydlr.com';
+const ELASTIC_API_BASE = import.meta.env.VITE_ELASTIC_API_URL || 'http://moverse.rydlr.com';
 
 // Search interface
 interface SearchQuery {
