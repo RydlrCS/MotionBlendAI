@@ -222,13 +222,5 @@ training_config = {
 }
 ```
 
-## Notes and next steps
-
-- Remove any checked-in large model or motion blobs; use GCS or Git LFS.
-- If you want I can also:
-  - convert all remaining headings to strict sentence case,
-  - remove or replace any remaining emojis or UI-style badges,
-  - enforce Connector SDK README ordering for `fivetran_connector` examples.
-
 ## Sources
 See in-file references for papers and partner docs.
