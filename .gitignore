@@ -4,3 +4,6 @@ google-cloud-sdk*
 google-cloud-sdk-456.0.0-darwin-x86_64.tar.gz
 google-cloud-sdk/bin/anthoscli
 google-cloud-sdk/data/cli/gcloud.json
+
+# Ignore generated demo blends so they are not committed
+build/blend_snn/*.bvh
