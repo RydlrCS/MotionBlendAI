@@ -14,7 +14,9 @@ interface SearchQuery {
 export async function getMotions(){
   try {
     const res = await axios.get(`${API_BASE}/motions`)
-    return { motions: res.data }
+    // The API returns an object like { motions: [...], total: N }
+    // Return the response body directly so callers can access res.data.motions
+    return res.data
   } catch (error) {
     console.error('Failed to fetch motions:', error)
     // Return mock data for development
