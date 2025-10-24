@@ -528,7 +528,19 @@ def get_artifacts_manifest():
                             "size": blob.size,
                             "metadata": blob.metadata or {}
                         })
-                
+
+                # If the GCS bucket exists but contains no .bvh blobs, fall
+                # back to the in-memory ARTIFACTS_STORE so the demo UI shows
+                # sample artifacts. This improves the developer/demo
+                # experience when the production bucket is empty.
+                if not artifacts and ARTIFACTS_STORE:
+                    logger.info("GCS returned no artifacts; falling back to in-memory store for manifest")
+                    return jsonify({
+                        "artifacts": ARTIFACTS_STORE,
+                        "total": len(ARTIFACTS_STORE),
+                        "last_updated": datetime.now().isoformat()
+                    })
+
                 return jsonify({
                     "artifacts": artifacts,
                     "total": len(artifacts),
