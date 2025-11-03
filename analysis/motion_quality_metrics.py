@@ -12,10 +12,19 @@ the quality of generated motion blends:
 Based on: https://github.com/RydlrCS/blendanim
 """
 
-import numpy as np
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Any
 import logging
-from typing import Dict, Optional, Tuple
-from numba import jit
+
+if TYPE_CHECKING:
+    import numpy as np  # type: ignore[import]
+    from numba import jit  # type: ignore[import]
+else:
+    try:
+        import numpy as np
+        from numba import jit
+    except ImportError:
+        np = None  # type: ignore
+        jit = lambda **kwargs: lambda f: f  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +38,8 @@ __all__ = [
 ]
 
 
-@jit(nopython=True)
-def _nn_dp_kernel(G, E, F, Cost, tmin, L, Nt):
+@jit(nopython=True)  # type: ignore[misc]
+def _nn_dp_kernel(G: Any, E: Any, F: Any, Cost: Any, tmin: int, L: int, Nt: int) -> Tuple[Any, Any, Any]:
     """
     Numba-optimized dynamic programming kernel for nearest neighbor search.
     """
@@ -49,7 +58,7 @@ def _nn_dp_kernel(G, E, F, Cost, tmin, L, Nt):
     return G, E, F
 
 
-def _group_cost_from_arrays(src: np.ndarray, tgt: np.ndarray) -> np.ndarray:
+def _group_cost_from_arrays(src: Any, tgt: Any) -> Any:
     """
     Compute pairwise distance matrix between motion sequences.
     
@@ -61,8 +70,8 @@ def _group_cost_from_arrays(src: np.ndarray, tgt: np.ndarray) -> np.ndarray:
         Cost matrix [T1, T2]
     """
     # Compute L2 distances
-    T1, D = src.shape
-    T2 = tgt.shape[0]
+    _t1, _d = src.shape
+    _t2 = tgt.shape[0]
     
     # Expand dimensions for broadcasting
     src_expanded = src[:, np.newaxis, :]  # [T1, 1, D]
@@ -76,8 +85,8 @@ def _group_cost_from_arrays(src: np.ndarray, tgt: np.ndarray) -> np.ndarray:
 
 
 def compute_coverage(
-    predicted: np.ndarray,
-    ground_truth: np.ndarray,
+    predicted: Any,  # np.ndarray
+    ground_truth: Any,  # np.ndarray
     tmin: int = 30,
     threshold: float = 2.0
 ) -> float:
@@ -114,7 +123,7 @@ def compute_coverage(
     return float(np.mean(results)) if results else 0.0
 
 
-def compute_global_diversity(sequences: np.ndarray, tmin: int = 30) -> float:
+def compute_global_diversity(sequences: Any, tmin: int = 30) -> float:  # sequences: np.ndarray
     """
     Compute global diversity: variation across entire sequences.
     
@@ -127,17 +136,17 @@ def compute_global_diversity(sequences: np.ndarray, tmin: int = 30) -> float:
     """
     if sequences.ndim == 4:
         # Flatten [N, T, J, D] -> [N, T, J*D]
-        N, T, J, D = sequences.shape
-        sequences = sequences.reshape(N, T, -1)
+        _n, _t, _j, _d = sequences.shape
+        sequences = sequences.reshape(_n, _t, -1)
     
-    N = len(sequences)
-    if N < 2:
+    n = len(sequences)
+    if n < 2:
         return 0.0
     
     # Compute pairwise distances between sequences
     distances = []
-    for i in range(N):
-        for j in range(i + 1, N):
+    for i in range(n):
+        for j in range(i + 1, n):
             cost = _group_cost_from_arrays(sequences[i], sequences[j])
             # Use dynamic time warping distance
             mean_cost = np.mean(cost)
@@ -146,7 +155,7 @@ def compute_global_diversity(sequences: np.ndarray, tmin: int = 30) -> float:
     return float(np.mean(distances)) if distances else 0.0
 
 
-def compute_local_diversity(sequence: np.ndarray, window_size: int = 30) -> float:
+def compute_local_diversity(sequence: Any, window_size: int = 30) -> float:  # sequence: np.ndarray
     """
     Compute local diversity: frame-to-frame variation within windows.
     
@@ -161,7 +170,7 @@ def compute_local_diversity(sequence: np.ndarray, window_size: int = 30) -> floa
         # Flatten [T, J, D] -> [T, J*D]
         sequence = sequence.reshape(sequence.shape[0], -1)
     
-    T, D = sequence.shape
+    T, _d = sequence.shape
     if T < window_size:
         return 0.0
     
@@ -176,7 +185,7 @@ def compute_local_diversity(sequence: np.ndarray, window_size: int = 30) -> floa
     return float(np.mean(diversities)) if diversities else 0.0
 
 
-def compute_l2_velocity(positions: np.ndarray, fps: int = 30) -> float:
+def compute_l2_velocity(positions: Any, fps: int = 30) -> float:  # positions: np.ndarray
     """
     Compute mean L2 velocity magnitude.
     
@@ -202,7 +211,7 @@ def compute_l2_velocity(positions: np.ndarray, fps: int = 30) -> float:
     return float(mean_velocity)
 
 
-def compute_l2_acceleration(positions: np.ndarray, fps: int = 30) -> float:
+def compute_l2_acceleration(positions: Any, fps: int = 30) -> float:  # positions: np.ndarray
     """
     Compute mean L2 acceleration magnitude.
     
@@ -232,8 +241,8 @@ def compute_l2_acceleration(positions: np.ndarray, fps: int = 30) -> float:
 
 
 def evaluate_blend_quality(
-    blend: np.ndarray,
-    reference: Optional[np.ndarray] = None,
+    blend: Any,  # np.ndarray
+    reference: Optional[Any] = None,  # Optional[np.ndarray]
     fps: int = 30,
     compute_coverage_metric: bool = True
 ) -> Dict[str, float]:

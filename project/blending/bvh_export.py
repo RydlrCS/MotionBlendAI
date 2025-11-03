@@ -1,4 +1,4 @@
-"""
+""" 
 BVH Export Utilities for Motion Blends
 
 Writes generated motion blends to BVH (BioVision Hierarchy) format
@@ -7,10 +7,17 @@ for use in animation software and further processing.
 Based on: https://github.com/RydlrCS/blendanim
 """
 
-import numpy as np
-from typing import Sequence, List, Optional
+from typing import TYPE_CHECKING, Sequence, List, Any
 from dataclasses import dataclass
 import logging
+
+if TYPE_CHECKING:
+    import numpy as np  # type: ignore[import]
+else:
+    try:
+        import numpy as np
+    except ImportError:
+        np = None  # type: ignore
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +32,7 @@ class BvhJoint:
     children: List['BvhJoint']
 
 
-def _create_hierarchy(parents: np.ndarray) -> BvhJoint:
+def _create_hierarchy(parents: Any) -> BvhJoint:  # parents: np.ndarray
     """
     Create hierarchical joint structure from parent indices.
     
@@ -46,6 +53,8 @@ def _create_hierarchy(parents: np.ndarray) -> BvhJoint:
             parent = joints[joint.parent_id]
             parent.children.append(joint)
     
+    if root is None:
+        raise ValueError("No root joint found (expected parent_id == -1)")
     return root
 
 
@@ -63,11 +72,11 @@ def _add_to_parent(pid: int, cid: int, joint: BvhJoint) -> bool:
 
 
 def _write_joint(
-    file,
+    file: Any,
     joint: BvhJoint,
     ordered_ids: List[int],
     names: Sequence[str],
-    offsets: np.ndarray,
+    offsets: Any,  # np.ndarray
     indent: int,
     precision: int
 ) -> None:
@@ -123,9 +132,9 @@ def _write_joint(
 
 
 def _write_motion(
-    file,
-    rotations: np.ndarray,
-    position: np.ndarray,
+    file: Any,
+    rotations: Any,  # np.ndarray
+    position: Any,  # np.ndarray
     precision: int
 ) -> None:
     """
@@ -157,10 +166,10 @@ def save_bvh(
     frames: int,
     timestep: float,
     names: Sequence[str],
-    parents: np.ndarray,
-    offsets: np.ndarray,
-    rotations: np.ndarray,
-    position: np.ndarray,
+    parents: Any,  # np.ndarray
+    offsets: Any,  # np.ndarray
+    rotations: Any,  # np.ndarray
+    position: Any,  # np.ndarray
     precision: int = 6
 ) -> None:
     """
